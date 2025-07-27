@@ -49,6 +49,17 @@ class MainActivity : AppCompatActivity() {
         observeSchedules()
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        // Clean up resources to prevent memory leaks
+        cleanupResources()
+    }
+
+    private fun cleanupResources() {
+        // Clear adapter to prevent memory leaks
+        binding.recyclerView.adapter = null
+    }
+
     // Initialize ViewModel with factory
     private fun setupViewModel() {
         val factory = MainViewModelFactory(application)
@@ -73,6 +84,9 @@ class MainActivity : AppCompatActivity() {
 
         binding.recyclerView.layoutManager = LinearLayoutManager(this)
         binding.recyclerView.adapter = adapter
+        
+        // Set fixed size for better performance
+        binding.recyclerView.setHasFixedSize(true)
     }
 
     // Setup FloatingActionButton to add new schedules
@@ -86,7 +100,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // Observe LiveData for schedule updates
+    // Observe LiveData for schedule updates with lifecycle awareness
     private fun observeSchedules() {
         viewModel.allSchedules.observe(this) { schedules ->
             adapter.submitList(schedules)

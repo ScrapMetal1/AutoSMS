@@ -38,6 +38,9 @@ class SmsScheduleAdapter(
                 textPhoneNumber.text = schedule.phoneNumber
                 textMessage.text = schedule.message
                 textTime.text = schedule.getFormattedTime()
+                
+                // Remove previous listener to prevent memory leaks
+                switchEnabled.setOnCheckedChangeListener(null)
                 switchEnabled.isChecked = schedule.isEnabled
 
                 // Apply visual feedback for enabled/disabled state
@@ -47,6 +50,7 @@ class SmsScheduleAdapter(
                 textMessage.alpha = alpha
                 textTime.alpha = alpha
 
+                // Set listeners after setting the checked state to prevent unwanted callbacks
                 switchEnabled.setOnCheckedChangeListener { _, _ ->
                     onToggleClick(schedule)
                 }
@@ -59,6 +63,13 @@ class SmsScheduleAdapter(
                     onDeleteClick(schedule)
                 }
             }
+        }
+
+        fun unbind() {
+            // Clear listeners to prevent memory leaks
+            binding.switchEnabled.setOnCheckedChangeListener(null)
+            binding.buttonEdit.setOnClickListener(null)
+            binding.buttonDelete.setOnClickListener(null)
         }
     }
 
@@ -73,5 +84,11 @@ class SmsScheduleAdapter(
 
     override fun onBindViewHolder(holder: SmsScheduleViewHolder, position: Int) {
         holder.bind(getItem(position), onToggleClick, onEditClick, onDeleteClick)
+    }
+
+    override fun onViewRecycled(holder: SmsScheduleViewHolder) {
+        super.onViewRecycled(holder)
+        // Clean up resources when view is recycled
+        holder.unbind()
     }
 }

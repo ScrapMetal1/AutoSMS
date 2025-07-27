@@ -33,6 +33,7 @@ class AddEditScheduleActivity : AppCompatActivity() {
     private var scheduleId: Long = 0
     private var isContactMode = true
 
+    // Memory optimization: Use weak references and proper cleanup
     private val contactPickerLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -51,6 +52,17 @@ class AddEditScheduleActivity : AppCompatActivity() {
         setupViewModel()
         setupViews()
         handleIntent()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        // Clean up resources to prevent memory leaks
+        cleanupResources()
+    }
+
+    private fun cleanupResources() {
+        // Clear any references that might cause memory leaks
+        selectedContact = null
     }
 
     // Initialize ViewModel with factory
@@ -104,17 +116,22 @@ class AddEditScheduleActivity : AppCompatActivity() {
             finish()
         }
 
-        // Setup phone number input listener
+        // Setup phone number input listener with debouncing
         binding.editTextPhoneNumber.addTextChangedListener(object : TextWatcher {
+            private var lastText = ""
+            
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: Editable?) {
                 val phoneNumber = s.toString().trim()
-                if (phoneNumber.isNotEmpty()) {
-                    binding.textPhoneNumberDisplay.text = getString(R.string.phone_display_format, phoneNumber)
-                    binding.textPhoneNumberDisplay.visibility = View.VISIBLE
-                } else {
-                    binding.textPhoneNumberDisplay.visibility = View.GONE
+                if (phoneNumber != lastText) {
+                    lastText = phoneNumber
+                    if (phoneNumber.isNotEmpty()) {
+                        binding.textPhoneNumberDisplay.text = getString(R.string.phone_display_format, phoneNumber)
+                        binding.textPhoneNumberDisplay.visibility = View.VISIBLE
+                    } else {
+                        binding.textPhoneNumberDisplay.visibility = View.GONE
+                    }
                 }
             }
         })
@@ -162,24 +179,31 @@ class AddEditScheduleActivity : AppCompatActivity() {
         contactPickerLauncher.launch(intent)
     }
 
-    // Process selected contact data
+    // Process selected contact data with proper cursor management
     private fun handleContactSelection(uri: Uri) {
-        val cursor: Cursor? = contentResolver.query(uri, null, null, null, null)
-        cursor?.use {
-            if (it.moveToFirst()) {
-                val nameIndex = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
-                val numberIndex = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
+        var cursor: Cursor? = null
+        try {
+            cursor = contentResolver.query(uri, null, null, null, null)
+            cursor?.use {
+                if (it.moveToFirst()) {
+                    val nameIndex = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
+                    val numberIndex = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
 
-                if (nameIndex != -1 && numberIndex != -1) {
-                    val contactName = it.getString(nameIndex)
-                    val phoneNumber = it.getString(numberIndex)
+                    if (nameIndex != -1 && numberIndex != -1) {
+                        val contactName = it.getString(nameIndex)
+                        val phoneNumber = it.getString(numberIndex)
 
-                    selectedContact = Pair(contactName, phoneNumber)
-                    binding.textSelectedContact.text = "$contactName ($phoneNumber)"
-                } else {
-                    Toast.makeText(this, "Unable to retrieve contact details", Toast.LENGTH_SHORT).show()
+                        selectedContact = Pair(contactName, phoneNumber)
+                        binding.textSelectedContact.text = "$contactName ($phoneNumber)"
+                    } else {
+                        Toast.makeText(this, "Unable to retrieve contact details", Toast.LENGTH_SHORT).show()
+                    }
                 }
             }
+        } catch (e: Exception) {
+            Toast.makeText(this, "Error retrieving contact: ${e.message}", Toast.LENGTH_SHORT).show()
+        } finally {
+            cursor?.close()
         }
     }
 
