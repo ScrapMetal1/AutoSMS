@@ -3,4 +3,17 @@
     <string name="title_activity_main">AutoSMS</string>
     <string name="title_activity_add_edit_schedule">Add AutoSMS Schedule</string>
     <string name="appbar_scrolling_view_behavior">com.google.android.material.appbar.AppBarLayout$ScrollingViewBehavior</string>
+    
+    <!-- New strings for phone number functionality -->
+    <string name="recipient">Recipient</string>
+    <string name="contact">Contact</string>
+    <string name="phone_number">Phone Number</string>
+    <string name="select_contact">Select Contact</string>
+    <string name="enter_phone_number">Enter phone number</string>
+    <string name="phone_number_helper">Enter the phone number to send SMS to</string>
+    <string name="no_contact_selected">No contact selected</string>
+    <string name="please_select_contact">Please select a contact</string>
+    <string name="please_enter_phone_number">Please enter a phone number</string>
+    <string name="please_enter_valid_phone_number">Please enter a valid phone number</string>
+    <string name="phone_display_format">Phone: %s</string>
 </resources>
