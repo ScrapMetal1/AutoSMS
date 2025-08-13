@@ -42,6 +42,7 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        setupToolbar()
         setupViewModel()
         setupRecyclerView()
         setupFab()
@@ -58,6 +59,27 @@ class MainActivity : AppCompatActivity() {
     private fun cleanupResources() {
         // Clear adapter to prevent memory leaks
         binding.recyclerView.adapter = null
+    }
+
+    // Setup toolbar with menu
+    private fun setupToolbar() {
+        setSupportActionBar(binding.toolbar)
+        supportActionBar?.title = "AutoSMS"
+    }
+
+    override fun onCreateOptionsMenu(menu: android.view.Menu): Boolean {
+        menuInflater.inflate(R.menu.main_menu, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: android.view.MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.action_settings -> {
+                startActivity(Intent(this, SettingsActivity::class.java))
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
+        }
     }
 
     // Initialize ViewModel with factory

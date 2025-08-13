@@ -15,11 +15,16 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
 import com.elias.autosms.data.SmsSchedule
 import com.elias.autosms.databinding.ActivityAddEditScheduleBinding
+import com.elias.autosms.utils.ChatGptService
 import com.elias.autosms.viewmodel.AddEditScheduleViewModel
 import com.elias.autosms.viewmodel.AddEditScheduleViewModelFactory
 import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.timepicker.MaterialTimePicker
 import com.google.android.material.timepicker.TimeFormat
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.*
 
 class AddEditScheduleActivity : AppCompatActivity() {
@@ -32,6 +37,9 @@ class AddEditScheduleActivity : AppCompatActivity() {
     private var isEditMode = false
     private var scheduleId: Long = 0
     private var isContactMode = true
+    private var isCustomMessage = true
+    private var selectedMessageStyle = "friendly"
+    private lateinit var chatGptService: ChatGptService
 
     // Memory optimization: Use weak references and proper cleanup
     private val contactPickerLauncher = registerForActivityResult(
@@ -73,6 +81,9 @@ class AddEditScheduleActivity : AppCompatActivity() {
 
     // Setup UI components and listeners
     private fun setupViews() {
+        // Initialize ChatGPT service
+        chatGptService = ChatGptService(this)
+        
         // Set current time as default
         val now = Calendar.getInstance()
         selectedHour = now.get(Calendar.HOUR_OF_DAY)
@@ -100,6 +111,48 @@ class AddEditScheduleActivity : AppCompatActivity() {
         // Set default selection to contact mode
         binding.toggleGroupContactType.check(R.id.buttonContactMode)
 
+        // Setup toggle group for message type
+        binding.toggleGroupMessageType.addOnButtonCheckedListener { group, checkedId, isChecked ->
+            if (isChecked) {
+                when (checkedId) {
+                    R.id.buttonCustomMessage -> {
+                        isCustomMessage = true
+                        binding.layoutCustomMessage.visibility = View.VISIBLE
+                        binding.layoutAiMessage.visibility = View.GONE
+                    }
+                    R.id.buttonAiMessage -> {
+                        isCustomMessage = false
+                        binding.layoutCustomMessage.visibility = View.GONE
+                        binding.layoutAiMessage.visibility = View.VISIBLE
+                        
+                        // Check if API key is configured
+                        if (!chatGptService.hasApiKey()) {
+                            Toast.makeText(this, "Please configure your OpenAI API key in Settings first", Toast.LENGTH_LONG).show()
+                        }
+                    }
+                }
+            }
+        }
+
+        // Set default selection to custom message
+        binding.toggleGroupMessageType.check(R.id.buttonCustomMessage)
+
+        // Setup message style toggle group
+        binding.toggleGroupMessageStyle.addOnButtonCheckedListener { group, checkedId, isChecked ->
+            if (isChecked) {
+                selectedMessageStyle = when (checkedId) {
+                    R.id.buttonFriendly -> "friendly"
+                    R.id.buttonProfessional -> "professional"
+                    R.id.buttonFunny -> "funny"
+                    R.id.buttonRomantic -> "romantic"
+                    else -> "friendly"
+                }
+            }
+        }
+
+        // Set default selection to friendly
+        binding.toggleGroupMessageStyle.check(R.id.buttonFriendly)
+
         binding.buttonSelectContact.setOnClickListener {
             openContactPicker()
         }
@@ -114,6 +167,10 @@ class AddEditScheduleActivity : AppCompatActivity() {
 
         binding.buttonCancel.setOnClickListener {
             finish()
+        }
+
+        binding.buttonGenerateMessage.setOnClickListener {
+            generateAiMessage()
         }
 
         // Setup phone number input listener with debouncing
@@ -233,6 +290,62 @@ class AddEditScheduleActivity : AppCompatActivity() {
         binding.textSelectedTime.text = "$hourStr:$minuteStr $amPm"
     }
 
+    // Generate AI message using ChatGPT
+    private fun generateAiMessage() {
+        val contactName = if (isContactMode) {
+            selectedContact?.first ?: run {
+                Toast.makeText(this, "Please select a contact first", Toast.LENGTH_SHORT).show()
+                return
+            }
+        } else {
+            val phoneNumber = binding.editTextPhoneNumber.text.toString().trim()
+            if (phoneNumber.isEmpty()) {
+                Toast.makeText(this, "Please enter a phone number first", Toast.LENGTH_SHORT).show()
+                return
+            }
+            phoneNumber
+        }
+
+        if (!chatGptService.hasApiKey()) {
+            Toast.makeText(this, "Please configure your OpenAI API key in Settings first", Toast.LENGTH_LONG).show()
+            return
+        }
+
+        binding.buttonGenerateMessage.isEnabled = false
+        binding.buttonGenerateMessage.text = "Generating..."
+
+        val context = binding.editTextContext.text.toString().trim()
+
+        CoroutineScope(Dispatchers.Main).launch {
+            try {
+                val result = if (context.isNotEmpty()) {
+                    chatGptService.generateMessageWithContext(contactName, context, 100)
+                } else {
+                    chatGptService.generateRandomMessage(contactName, selectedMessageStyle, 100)
+                }
+
+                if (result.isSuccess) {
+                    val generatedMessage = result.getOrNull() ?: ""
+                    binding.textGeneratedMessage.text = generatedMessage
+                    binding.textGeneratedMessage.visibility = View.VISIBLE
+                    
+                    // Auto-fill the custom message field with the generated message
+                    binding.editTextMessage.setText(generatedMessage)
+                    
+                    Toast.makeText(this@AddEditScheduleActivity, "Message generated successfully!", Toast.LENGTH_SHORT).show()
+                } else {
+                    val errorMessage = result.exceptionOrNull()?.message ?: "Failed to generate message"
+                    Toast.makeText(this@AddEditScheduleActivity, "Error: $errorMessage", Toast.LENGTH_LONG).show()
+                }
+            } catch (e: Exception) {
+                Toast.makeText(this@AddEditScheduleActivity, "Error: ${e.message}", Toast.LENGTH_LONG).show()
+            } finally {
+                binding.buttonGenerateMessage.isEnabled = true
+                binding.buttonGenerateMessage.text = "Generate Message"
+            }
+        }
+    }
+
     // Save or update the schedule
     private fun saveSchedule() {
         val message = binding.editTextMessage.text.toString().trim()
@@ -273,7 +386,10 @@ class AddEditScheduleActivity : AppCompatActivity() {
             message = message,
             hour = selectedHour,
             minute = selectedMinute,
-            isEnabled = true
+            isEnabled = true,
+            isAiGenerated = !isCustomMessage,
+            messageType = if (isCustomMessage) "custom" else selectedMessageStyle,
+            messageContext = if (isCustomMessage) "" else binding.editTextContext.text.toString().trim()
         )
 
         if (isEditMode) {

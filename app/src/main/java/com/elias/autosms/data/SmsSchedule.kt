@@ -16,6 +16,9 @@ data class SmsSchedule(
     val hour: Int,
     val minute: Int,
     val isEnabled: Boolean = true,
+    val isAiGenerated: Boolean = false,
+    val messageType: String = "custom", // "custom", "friendly", "professional", "funny", "romantic"
+    val messageContext: String = "",
     val createdAt: Long = System.currentTimeMillis()
 ) : Parcelable {
 
