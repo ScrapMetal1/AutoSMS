@@ -9,7 +9,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [SmsSchedule::class],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class SmsScheduleDatabase : RoomDatabase() {
@@ -52,6 +52,28 @@ abstract class SmsScheduleDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Add regenerateDaily column (defaults to 1/true)
+                val cursor = database.query("PRAGMA table_info(`sms_schedules`)")
+                var hasRegenerateDaily = false
+                try {
+                    val nameIndex = cursor.getColumnIndex("name")
+                    while (cursor.moveToNext()) {
+                        if (nameIndex >= 0 && cursor.getString(nameIndex) == "regenerateDaily") {
+                            hasRegenerateDaily = true
+                            break
+                        }
+                    }
+                } finally {
+                    cursor.close()
+                }
+                if (!hasRegenerateDaily) {
+                    database.execSQL("ALTER TABLE sms_schedules ADD COLUMN regenerateDaily INTEGER NOT NULL DEFAULT 1")
+                }
+            }
+        }
+
         fun getDatabase(context: Context): SmsScheduleDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -59,7 +81,7 @@ abstract class SmsScheduleDatabase : RoomDatabase() {
                     SmsScheduleDatabase::class.java,
                     "sms_schedule_database"
                 )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                 .build()
                 INSTANCE = instance
                 instance

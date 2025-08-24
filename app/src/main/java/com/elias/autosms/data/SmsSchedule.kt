@@ -17,6 +17,7 @@ data class SmsSchedule(
     val minute: Int,
     val isEnabled: Boolean = true,
     val isAiGenerated: Boolean = false,
+    val regenerateDaily: Boolean = true,
     val messageType: String = "custom", // "custom", "friendly", "professional", "funny", "romantic"
     val messageContext: String = "",
     val createdAt: Long = System.currentTimeMillis()

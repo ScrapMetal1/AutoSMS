@@ -14,6 +14,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.elias.autosms.R
 import com.elias.autosms.databinding.ActivityMainBinding
 import com.elias.autosms.ui.adapter.SmsScheduleAdapter
 import com.elias.autosms.viewmodel.MainViewModel

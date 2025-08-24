@@ -53,7 +53,7 @@ class SmsWorker(
 
             // Get the message to send (generate new AI message if needed)
             val messageToSend = if (schedule.isAiGenerated) {
-                generateAiMessage(schedule)
+                if (schedule.regenerateDaily) generateAiMessage(schedule) else schedule.message
             } else {
                 schedule.message
             }

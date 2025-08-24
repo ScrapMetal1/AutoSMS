@@ -209,6 +209,15 @@
                     android:orientation="vertical"
                     android:visibility="gone">
 
+                    <!-- Regenerate Daily Switch -->
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switchRegenerateDaily"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/regenerate_daily"
+                        android:checked="true"
+                        android:layout_marginBottom="12dp" />
+
                     <!-- Message Style Selection -->
                     <TextView
                         android:layout_width="wrap_content"
@@ -218,47 +227,23 @@
                         android:textStyle="bold"
                         android:layout_marginBottom="8dp" />
 
-                    <com.google.android.material.button.MaterialButtonToggleGroup
-                        android:id="@+id/toggleGroupMessageStyle"
+                    <com.google.android.material.textfield.TextInputLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="16dp"
-                        app:singleSelection="true"
-                        app:selectionRequired="true">
+                        android:hint="@string/message_style"
+                        app:endIconMode="dropdown_menu">
 
-                        <Button
-                            android:id="@+id/buttonFriendly"
-                            android:layout_width="0dp"
+                        <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                            android:id="@+id/autoCompleteMessageStyle"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="Friendly"
-                            style="@style/Widget.Material3.Button.OutlinedButton" />
+                            android:paddingStart="12dp"
+                            android:paddingEnd="12dp"
+                            android:inputType="none"
+                            android:entries="@array/message_styles" />
 
-                        <Button
-                            android:id="@+id/buttonProfessional"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="Professional"
-                            style="@style/Widget.Material3.Button.OutlinedButton" />
-
-                        <Button
-                            android:id="@+id/buttonFunny"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="Funny"
-                            style="@style/Widget.Material3.Button.OutlinedButton" />
-
-                        <Button
-                            android:id="@+id/buttonRomantic"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="Romantic"
-                            style="@style/Widget.Material3.Button.OutlinedButton" />
-
-                    </com.google.android.material.button.MaterialButtonToggleGroup>
+                    </com.google.android.material.textfield.TextInputLayout>
 
                     <!-- Context Input -->
                     <com.google.android.material.textfield.TextInputLayout

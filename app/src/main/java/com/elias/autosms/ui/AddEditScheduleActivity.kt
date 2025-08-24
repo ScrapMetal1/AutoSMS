@@ -13,12 +13,13 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
+import com.elias.autosms.R
 import com.elias.autosms.data.SmsSchedule
 import com.elias.autosms.databinding.ActivityAddEditScheduleBinding
 import com.elias.autosms.utils.ChatGptService
 import com.elias.autosms.viewmodel.AddEditScheduleViewModel
 import com.elias.autosms.viewmodel.AddEditScheduleViewModelFactory
-import com.google.android.material.button.MaterialButtonToggleGroup
+import com.google.android.material.textfield.MaterialAutoCompleteTextView
 import com.google.android.material.timepicker.MaterialTimePicker
 import com.google.android.material.timepicker.TimeFormat
 import kotlinx.coroutines.CoroutineScope
@@ -39,6 +40,7 @@ class AddEditScheduleActivity : AppCompatActivity() {
     private var isContactMode = true
     private var isCustomMessage = true
     private var selectedMessageStyle = "friendly"
+    private var regenerateDaily = true
     private lateinit var chatGptService: ChatGptService
 
     // Memory optimization: Use weak references and proper cleanup
@@ -137,21 +139,33 @@ class AddEditScheduleActivity : AppCompatActivity() {
         // Set default selection to custom message
         binding.toggleGroupMessageType.check(R.id.buttonCustomMessage)
 
-        // Setup message style toggle group
-        binding.toggleGroupMessageStyle.addOnButtonCheckedListener { group, checkedId, isChecked ->
-            if (isChecked) {
-                selectedMessageStyle = when (checkedId) {
-                    R.id.buttonFriendly -> "friendly"
-                    R.id.buttonProfessional -> "professional"
-                    R.id.buttonFunny -> "funny"
-                    R.id.buttonRomantic -> "romantic"
-                    else -> "friendly"
-                }
-            }
+        // Setup message style dropdown
+        val styleLabelToValue = mapOf(
+            getString(R.string.friendly) to "friendly",
+            getString(R.string.professional) to "professional",
+            getString(R.string.funny) to "funny",
+            getString(R.string.romantic) to "romantic"
+        )
+
+        // Ensure items are attached to dropdown
+        (binding.autoCompleteMessageStyle as MaterialAutoCompleteTextView).setSimpleItems(R.array.message_styles)
+
+        // Default selection
+        (binding.autoCompleteMessageStyle as MaterialAutoCompleteTextView).setText(
+            getString(R.string.friendly),
+            false
+        )
+        selectedMessageStyle = "friendly"
+
+        binding.autoCompleteMessageStyle.setOnItemClickListener { parent, _, position, _ ->
+            val label = parent.getItemAtPosition(position) as String
+            selectedMessageStyle = styleLabelToValue[label] ?: "friendly"
         }
 
-        // Set default selection to friendly
-        binding.toggleGroupMessageStyle.check(R.id.buttonFriendly)
+        // Regenerate daily switch
+        binding.switchRegenerateDaily.setOnCheckedChangeListener { _, isChecked ->
+            regenerateDaily = isChecked
+        }
 
         binding.buttonSelectContact.setOnClickListener {
             openContactPicker()
@@ -225,6 +239,21 @@ class AddEditScheduleActivity : AppCompatActivity() {
             selectedHour = schedule.hour
             selectedMinute = schedule.minute
             updateTimeDisplay()
+
+            // If AI message, set dropdown to the saved style
+            if (schedule.isAiGenerated) {
+                val label = when (schedule.messageType.lowercase()) {
+                    "friendly" -> getString(R.string.friendly)
+                    "professional" -> getString(R.string.professional)
+                    "funny" -> getString(R.string.funny)
+                    "romantic" -> getString(R.string.romantic)
+                    else -> getString(R.string.friendly)
+                }
+                (binding.autoCompleteMessageStyle as MaterialAutoCompleteTextView).setText(label, false)
+                selectedMessageStyle = schedule.messageType
+                binding.switchRegenerateDaily.isChecked = schedule.regenerateDaily
+                regenerateDaily = schedule.regenerateDaily
+            }
         } else {
             title = "Add AutoSMS Schedule"
         }
@@ -374,7 +403,7 @@ class AddEditScheduleActivity : AppCompatActivity() {
             contactName = phoneNumber // Use phone number as contact name for non-contacts
         }
 
-        if (message.isEmpty()) {
+        if (isCustomMessage && message.isEmpty()) {
             Toast.makeText(this, "Please enter a message", Toast.LENGTH_SHORT).show()
             return
         }
@@ -388,6 +417,7 @@ class AddEditScheduleActivity : AppCompatActivity() {
             minute = selectedMinute,
             isEnabled = true,
             isAiGenerated = !isCustomMessage,
+            regenerateDaily = if (!isCustomMessage) regenerateDaily else false,
             messageType = if (isCustomMessage) "custom" else selectedMessageStyle,
             messageContext = if (isCustomMessage) "" else binding.editTextContext.text.toString().trim()
         )
