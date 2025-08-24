@@ -30,6 +30,12 @@
     <string name="context_helper">Provide context for more personalized messages</string>
     <string name="generate_message">Generate Message</string>
     <string name="regenerate_daily">Generate new message each day</string>
+    <string name="model">Model</string>
+    <string name="select_model">Select model</string>
+    <string-array name="openai_models">
+        <item>gpt-4o-mini</item>
+        <item>gpt-3.5-turbo</item>
+    </string-array>
     
     <string-array name="message_styles">
         <item>@string/friendly</item>

@@ -67,8 +67,8 @@ class ChatGptService(private val context: Context) {
         return !apiKey.isNullOrBlank()
     }
 
-    private fun getPreferredModel(): String {
-        return prefs.getString("openai_model", "gpt-5-nano") ?: "gpt-5-nano"
+    fun getPreferredModel(): String {
+        return prefs.getString("openai_model", "gpt-4o-mini") ?: "gpt-4o-mini"
     }
 
     fun setPreferredModel(model: String) {

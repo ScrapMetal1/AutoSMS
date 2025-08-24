@@ -22,6 +22,7 @@ class SettingsActivity : AppCompatActivity() {
         
         setupToolbar()
         setupApiKeySection()
+        setupModelSection()
         setupTestButton()
     }
 
@@ -49,6 +50,23 @@ class SettingsActivity : AppCompatActivity() {
             Toast.makeText(this, "API key saved successfully", Toast.LENGTH_SHORT).show()
             binding.btnSaveApiKey.text = "Update API Key"
             binding.etApiKey.setText("••••••••••••••••••••••••••••••••")
+        }
+    }
+
+    private fun setupModelSection() {
+        // Populate dropdown
+        val models = resources.getStringArray(com.elias.autosms.R.array.openai_models)
+        binding.autoCompleteModel.setSimpleItems(models)
+
+        // Set current selection
+        val currentModel = chatGptService.getPreferredModel()
+        val selectedLabel = models.find { it.equals(currentModel, ignoreCase = true) } ?: models.first()
+        binding.autoCompleteModel.setText(selectedLabel, false)
+
+        binding.autoCompleteModel.setOnItemClickListener { parent, _, position, _ ->
+            val model = parent.getItemAtPosition(position) as String
+            chatGptService.setPreferredModel(model)
+            Toast.makeText(this, "Model set to $model", Toast.LENGTH_SHORT).show()
         }
     }
 
