@@ -34,14 +34,24 @@ class SmsWorker(
                 return Result.success()
             }
 
-            // Check if it's within a 5-minute window of the scheduled time
+            // Check if it's within a 60-minute window of the scheduled time
+            // We widen the window because WorkManager is not exact and can be delayed by Doze mode
             val now = Calendar.getInstance()
             val currentHour = now.get(Calendar.HOUR_OF_DAY)
             val currentMinute = now.get(Calendar.MINUTE)
 
-            val timeDiff = Math.abs((currentHour * 60 + currentMinute) - (hour * 60 + minute))
-            if (timeDiff > 5) {
-                Log.d("SmsWorker", "Not the right time to send SMS, time difference: $timeDiff minutes")
+            val targetMinutes = hour * 60 + minute
+            val currentMinutes = currentHour * 60 + currentMinute
+            
+            // Calculate difference handling midnight wrap
+            val diff = Math.abs(currentMinutes - targetMinutes)
+            val timeDiff = minOf(diff, 1440 - diff) // 1440 mins in a day
+
+            if (timeDiff > 60) {
+                Log.d("SmsWorker", "Not the right time to send SMS, time difference: $timeDiff minutes. Current: $currentHour:$currentMinute, Target: $hour:$minute")
+                // If it's too late, we skip it. But 60 mins is a generous buffer.
+                // Note: WorkManager might run this job much later if the device was off. 
+                // In that case, we probably shouldn't send a "Good Morning" text at midnight.
                 return Result.success()
             }
 
@@ -114,7 +124,13 @@ class SmsWorker(
     // Sends an SMS, handling both single and multipart messages
     private fun sendSms(phoneNumber: String, message: String) {
         try {
-            val smsManager = SmsManager.getDefault()
+            val smsManager = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                applicationContext.getSystemService(SmsManager::class.java)
+            } else {
+                @Suppress("DEPRECATION")
+                SmsManager.getDefault()
+            }
+            
             val parts = smsManager.divideMessage(message)
 
             if (parts.size == 1) {
@@ -128,3 +144,5 @@ class SmsWorker(
         }
     }
 }
+
+

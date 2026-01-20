@@ -127,7 +127,7 @@ class AddEditScheduleActivity : AppCompatActivity() {
                         binding.layoutCustomMessage.visibility = View.GONE
                         binding.layoutAiMessage.visibility = View.VISIBLE
                         
-                        // Check if API key is configured
+                        // Check if API key is configured. 
                         if (!chatGptService.hasApiKey()) {
                             Toast.makeText(this, "Please configure your OpenAI API key in Settings first", Toast.LENGTH_LONG).show()
                         }
@@ -135,7 +135,6 @@ class AddEditScheduleActivity : AppCompatActivity() {
                 }
             }
         }
-
         // Set default selection to custom message
         binding.toggleGroupMessageType.check(R.id.buttonCustomMessage)
 
@@ -437,8 +436,8 @@ class AddEditScheduleActivity : AppCompatActivity() {
     private fun isValidPhoneNumber(phoneNumber: String): Boolean {
         // Remove all non-digit characters for validation
         val digitsOnly = phoneNumber.replace(Regex("[^0-9]"), "")
-        // Check if it has 10-15 digits (typical phone number length)
-        return digitsOnly.length in 10..15
+        // Basic validation: ensure it has at least 3 digits (allows local numbers, shortcodes, etc.)
+        return digitsOnly.length >= 3
     }
 
     override fun onSupportNavigateUp(): Boolean {
