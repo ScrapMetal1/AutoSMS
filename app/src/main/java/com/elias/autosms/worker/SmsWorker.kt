@@ -9,17 +9,15 @@ import com.elias.autosms.data.SmsScheduleDatabase
 import com.elias.autosms.utils.ChatGptService
 import java.util.*
 
-class SmsWorker(
-    context: Context,
-    params: WorkerParameters
-) : CoroutineWorker(context, params) {
+class SmsWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
+        var schedule: com.elias.autosms.data.SmsSchedule? = null
+
         return try {
             val scheduleId = inputData.getLong("scheduleId", -1)
             val contactName = inputData.getString("contactName") ?: ""
             val phoneNumber = inputData.getString("phoneNumber") ?: ""
-            val message = inputData.getString("message") ?: ""
             val hour = inputData.getInt("hour", 0)
             val minute = inputData.getInt("minute", 0)
 
@@ -27,31 +25,32 @@ class SmsWorker(
 
             // Verify the schedule is still enabled
             val database = SmsScheduleDatabase.getDatabase(applicationContext)
-            val schedule = database.smsScheduleDao().getScheduleById(scheduleId)
+            schedule = database.smsScheduleDao().getScheduleById(scheduleId)
 
             if (schedule == null || !schedule.isEnabled) {
                 Log.d("SmsWorker", "Schedule $scheduleId is disabled or deleted, skipping")
                 return Result.success()
             }
 
-            // Check if it's within a 60-minute window of the scheduled time
-            // We widen the window because WorkManager is not exact and can be delayed by Doze mode
+            // Check if it's within a reasonable window of the scheduled time
+            // We widen the window because WorkManager can be delayed by Doze mode
             val now = Calendar.getInstance()
             val currentHour = now.get(Calendar.HOUR_OF_DAY)
             val currentMinute = now.get(Calendar.MINUTE)
 
             val targetMinutes = hour * 60 + minute
             val currentMinutes = currentHour * 60 + currentMinute
-            
+
             // Calculate difference handling midnight wrap
             val diff = Math.abs(currentMinutes - targetMinutes)
             val timeDiff = minOf(diff, 1440 - diff) // 1440 mins in a day
 
-            if (timeDiff > 60) {
-                Log.d("SmsWorker", "Not the right time to send SMS, time difference: $timeDiff minutes. Current: $currentHour:$currentMinute, Target: $hour:$minute")
-                // If it's too late, we skip it. But 60 mins is a generous buffer.
-                // Note: WorkManager might run this job much later if the device was off. 
-                // In that case, we probably shouldn't send a "Good Morning" text at midnight.
+            // Relaxed window to 120 minutes to account for aggressive battery optimization
+            if (timeDiff > 120) {
+                Log.d(
+                        "SmsWorker",
+                        "Not the right time to send SMS, time difference: $timeDiff minutes. Current: $currentHour:$currentMinute, Target: $hour:$minute"
+                )
                 return Result.success()
             }
 
@@ -62,11 +61,13 @@ class SmsWorker(
             }
 
             // Get the message to send (generate new AI message if needed)
-            val messageToSend = if (schedule.isAiGenerated) {
-                if (schedule.regenerateDaily) generateAiMessage(schedule) else schedule.message
-            } else {
-                schedule.message
-            }
+            val messageToSend =
+                    if (schedule.isAiGenerated) {
+                        if (schedule.regenerateDaily) generateAiMessage(schedule)
+                        else schedule.message
+                    } else {
+                        schedule.message
+                    }
 
             if (messageToSend.isEmpty()) {
                 Log.e("SmsWorker", "Empty message")
@@ -83,36 +84,53 @@ class SmsWorker(
         } catch (e: Exception) {
             Log.e("SmsWorker", "Error sending SMS", e)
             Result.failure()
+        } finally {
+            // CRITICAL: Reschedule the next run regardless of success or failure (unless disabled)
+            // This fixes the issue where the chain breaks if a job is skipped or fails
+            try {
+                if (schedule != null && schedule.isEnabled) {
+                    Log.d("SmsWorker", "Rescheduling next execution for schedule ${schedule.id}")
+                    val smsScheduleManager =
+                            com.elias.autosms.utils.SmsScheduleManager(applicationContext)
+                    smsScheduleManager.scheduleRepeatingWork(schedule)
+                }
+            } catch (e: Exception) {
+                Log.e("SmsWorker", "Failed to reschedule work", e)
+            }
         }
     }
 
     private suspend fun generateAiMessage(schedule: com.elias.autosms.data.SmsSchedule): String {
         return try {
             val chatGptService = ChatGptService(applicationContext)
-            
+
             if (!chatGptService.hasApiKey()) {
                 Log.w("SmsWorker", "No API key configured, using fallback message")
                 return schedule.message
             }
 
-            val result = if (schedule.messageContext.isNotEmpty()) {
-                chatGptService.generateMessageWithContext(
-                    schedule.contactName,
-                    schedule.messageContext,
-                    100
-                )
-            } else {
-                chatGptService.generateRandomMessage(
-                    schedule.contactName,
-                    schedule.messageType,
-                    100
-                )
-            }
+            val result =
+                    if (schedule.messageContext.isNotEmpty()) {
+                        chatGptService.generateMessageWithContext(
+                                schedule.contactName,
+                                schedule.messageContext,
+                                100
+                        )
+                    } else {
+                        chatGptService.generateRandomMessage(
+                                schedule.contactName,
+                                schedule.messageType,
+                                100
+                        )
+                    }
 
             if (result.isSuccess) {
                 result.getOrNull() ?: schedule.message
             } else {
-                Log.w("SmsWorker", "Failed to generate AI message: ${result.exceptionOrNull()?.message}")
+                Log.w(
+                        "SmsWorker",
+                        "Failed to generate AI message: ${result.exceptionOrNull()?.message}"
+                )
                 schedule.message // Fallback to original message
             }
         } catch (e: Exception) {
@@ -124,13 +142,13 @@ class SmsWorker(
     // Sends an SMS, handling both single and multipart messages
     private fun sendSms(phoneNumber: String, message: String) {
         try {
-            val smsManager = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-                applicationContext.getSystemService(SmsManager::class.java)
-            } else {
-                @Suppress("DEPRECATION")
-                SmsManager.getDefault()
-            }
-            
+            val smsManager =
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                        applicationContext.getSystemService(SmsManager::class.java)
+                    } else {
+                        @Suppress("DEPRECATION") SmsManager.getDefault()
+                    }
+
             val parts = smsManager.divideMessage(message)
 
             if (parts.size == 1) {
@@ -144,5 +162,3 @@ class SmsWorker(
         }
     }
 }
-
-
