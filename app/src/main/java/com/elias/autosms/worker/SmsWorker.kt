@@ -6,7 +6,6 @@ import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.elias.autosms.data.SmsScheduleDatabase
-import com.elias.autosms.utils.ChatGptService
 import java.util.*
 
 class SmsWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
@@ -60,14 +59,8 @@ class SmsWorker(context: Context, params: WorkerParameters) : CoroutineWorker(co
                 return Result.failure()
             }
 
-            // Get the message to send (generate new AI message if needed)
-            val messageToSend =
-                    if (schedule.isAiGenerated) {
-                        if (schedule.regenerateDaily) generateAiMessage(schedule)
-                        else schedule.message
-                    } else {
-                        schedule.message
-                    }
+            // Get the message to send
+            val messageToSend = schedule.message
 
             if (messageToSend.isEmpty()) {
                 Log.e("SmsWorker", "Empty message")
@@ -97,45 +90,6 @@ class SmsWorker(context: Context, params: WorkerParameters) : CoroutineWorker(co
             } catch (e: Exception) {
                 Log.e("SmsWorker", "Failed to reschedule work", e)
             }
-        }
-    }
-
-    private suspend fun generateAiMessage(schedule: com.elias.autosms.data.SmsSchedule): String {
-        return try {
-            val chatGptService = ChatGptService(applicationContext)
-
-            if (!chatGptService.hasApiKey()) {
-                Log.w("SmsWorker", "No API key configured, using fallback message")
-                return schedule.message
-            }
-
-            val result =
-                    if (schedule.messageContext.isNotEmpty()) {
-                        chatGptService.generateMessageWithContext(
-                                schedule.contactName,
-                                schedule.messageContext,
-                                100
-                        )
-                    } else {
-                        chatGptService.generateRandomMessage(
-                                schedule.contactName,
-                                schedule.messageType,
-                                100
-                        )
-                    }
-
-            if (result.isSuccess) {
-                result.getOrNull() ?: schedule.message
-            } else {
-                Log.w(
-                        "SmsWorker",
-                        "Failed to generate AI message: ${result.exceptionOrNull()?.message}"
-                )
-                schedule.message // Fallback to original message
-            }
-        } catch (e: Exception) {
-            Log.e("SmsWorker", "Error generating AI message", e)
-            schedule.message // Fallback to original message
         }
     }
 

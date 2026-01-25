@@ -80,3 +80,9 @@ class SmsScheduleManager(private val context: Context) {
         return target.timeInMillis - now.timeInMillis
     }
 }
+
+// i5t5mp14s1;4,ovn:w0:q.9 v : [30]
+// .29tyvu0 ;eb4cg2 .4eqs0 [25]
+// ,8dg,bp1eus.y;wjkaq 8 k [55]
+// stowa6 [33]
+// 2,x3tui.rfn1fruku1dw.,euo4xswp,230k36 [46]

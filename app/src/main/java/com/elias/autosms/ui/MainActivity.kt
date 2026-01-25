@@ -14,7 +14,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.elias.autosms.R
 import com.elias.autosms.databinding.ActivityMainBinding
 import com.elias.autosms.ui.adapter.SmsScheduleAdapter
 import com.elias.autosms.viewmodel.MainViewModel
@@ -26,17 +25,17 @@ class MainActivity : AppCompatActivity() {
     private lateinit var viewModel: MainViewModel
     private lateinit var adapter: SmsScheduleAdapter
 
-    private val requestPermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) { permissions ->
-        val allGranted = permissions.all { it.value }
-        if (allGranted) {
-            Toast.makeText(this, "Permissions granted", Toast.LENGTH_SHORT).show()
-            checkAlarmPermission()
-        } else {
-            showPermissionDeniedDialog()
-        }
-    }
+    private val requestPermissionLauncher =
+            registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+                    permissions ->
+                val allGranted = permissions.all { it.value }
+                if (allGranted) {
+                    Toast.makeText(this, "Permissions granted", Toast.LENGTH_SHORT).show()
+                    checkAlarmPermission()
+                } else {
+                    showPermissionDeniedDialog()
+                }
+            }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -68,21 +67,6 @@ class MainActivity : AppCompatActivity() {
         supportActionBar?.title = "AutoSMS"
     }
 
-    override fun onCreateOptionsMenu(menu: android.view.Menu): Boolean {
-        menuInflater.inflate(R.menu.main_menu, menu)
-        return true
-    }
-
-    override fun onOptionsItemSelected(item: android.view.MenuItem): Boolean {
-        return when (item.itemId) {
-            R.id.action_settings -> {
-                startActivity(Intent(this, SettingsActivity::class.java))
-                true
-            }
-            else -> super.onOptionsItemSelected(item)
-        }
-    }
-
     // Initialize ViewModel with factory
     private fun setupViewModel() {
         val factory = MainViewModelFactory(application)
@@ -91,23 +75,24 @@ class MainActivity : AppCompatActivity() {
 
     // Setup RecyclerView with adapter for displaying schedules
     private fun setupRecyclerView() {
-        adapter = SmsScheduleAdapter(
-            onToggleClick = { schedule ->
-                viewModel.toggleSchedule(schedule.id, !schedule.isEnabled)
-            },
-            onEditClick = { schedule ->
-                val intent = Intent(this, AddEditScheduleActivity::class.java)
-                intent.putExtra("schedule", schedule)
-                startActivity(intent)
-            },
-            onDeleteClick = { schedule ->
-                showDeleteConfirmation(schedule.id, schedule.contactName)
-            }
-        )
+        adapter =
+                SmsScheduleAdapter(
+                        onToggleClick = { schedule ->
+                            viewModel.toggleSchedule(schedule.id, !schedule.isEnabled)
+                        },
+                        onEditClick = { schedule ->
+                            val intent = Intent(this, AddEditScheduleActivity::class.java)
+                            intent.putExtra("schedule", schedule)
+                            startActivity(intent)
+                        },
+                        onDeleteClick = { schedule ->
+                            showDeleteConfirmation(schedule.id, schedule.contactName)
+                        }
+                )
 
         binding.recyclerView.layoutManager = LinearLayoutManager(this)
         binding.recyclerView.adapter = adapter
-        
+
         // Set fixed size for better performance
         binding.recyclerView.setHasFixedSize(true)
     }
@@ -127,11 +112,12 @@ class MainActivity : AppCompatActivity() {
     private fun observeSchedules() {
         viewModel.allSchedules.observe(this) { schedules ->
             adapter.submitList(schedules)
-            binding.emptyView.visibility = if (schedules.isEmpty()) {
-                android.view.View.VISIBLE
-            } else {
-                android.view.View.GONE
-            }
+            binding.emptyView.visibility =
+                    if (schedules.isEmpty()) {
+                        android.view.View.VISIBLE
+                    } else {
+                        android.view.View.GONE
+                    }
         }
     }
 
@@ -139,13 +125,15 @@ class MainActivity : AppCompatActivity() {
     private fun checkPermissions() {
         val permissions = mutableListOf<String>()
 
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS)
-            != PackageManager.PERMISSION_GRANTED) {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS) !=
+                        PackageManager.PERMISSION_GRANTED
+        ) {
             permissions.add(Manifest.permission.SEND_SMS)
         }
 
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS)
-            != PackageManager.PERMISSION_GRANTED) {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) !=
+                        PackageManager.PERMISSION_GRANTED
+        ) {
             permissions.add(Manifest.permission.READ_CONTACTS)
         }
 
@@ -170,34 +158,38 @@ class MainActivity : AppCompatActivity() {
 
     // Verify if all required permissions are granted
     private fun hasRequiredPermissions(): Boolean {
-        return ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED &&
-                ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED
+        return ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS) ==
+                PackageManager.PERMISSION_GRANTED &&
+                ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) ==
+                        PackageManager.PERMISSION_GRANTED
     }
 
     // Show dialog if permissions are denied
     private fun showPermissionDeniedDialog() {
         AlertDialog.Builder(this)
-            .setTitle("Permissions Required")
-            .setMessage("AutoSMS requires SMS and Contacts permissions to function properly. Please grant these permissions in Settings.")
-            .setPositiveButton("Settings") { _, _ ->
-                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
-                intent.data = Uri.fromParts("package", packageName, null)
-                startActivity(intent)
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
+                .setTitle("Permissions Required")
+                .setMessage(
+                        "AutoSMS requires SMS and Contacts permissions to function properly. Please grant these permissions in Settings."
+                )
+                .setPositiveButton("Settings") { _, _ ->
+                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                    intent.data = Uri.fromParts("package", packageName, null)
+                    startActivity(intent)
+                }
+                .setNegativeButton("Cancel", null)
+                .show()
     }
 
     // Show confirmation dialog before deleting a schedule
     private fun showDeleteConfirmation(scheduleId: Long, contactName: String) {
         AlertDialog.Builder(this)
-            .setTitle("Delete Schedule")
-            .setMessage("Are you sure you want to delete the SMS schedule for $contactName?")
-            .setPositiveButton("Delete") { _, _ ->
-                viewModel.deleteSchedule(scheduleId)
-                Toast.makeText(this, "Schedule deleted", Toast.LENGTH_SHORT).show()
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
+                .setTitle("Delete Schedule")
+                .setMessage("Are you sure you want to delete the SMS schedule for $contactName?")
+                .setPositiveButton("Delete") { _, _ ->
+                    viewModel.deleteSchedule(scheduleId)
+                    Toast.makeText(this, "Schedule deleted", Toast.LENGTH_SHORT).show()
+                }
+                .setNegativeButton("Cancel", null)
+                .show()
     }
 }

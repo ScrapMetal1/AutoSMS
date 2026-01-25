@@ -1,6 +1,5 @@
 package com.elias.autosms.ui
 
-import android.app.Activity
 import android.content.Intent
 import android.database.Cursor
 import android.net.Uri
@@ -16,17 +15,12 @@ import androidx.lifecycle.ViewModelProvider
 import com.elias.autosms.R
 import com.elias.autosms.data.SmsSchedule
 import com.elias.autosms.databinding.ActivityAddEditScheduleBinding
-import com.elias.autosms.utils.ChatGptService
 import com.elias.autosms.viewmodel.AddEditScheduleViewModel
 import com.elias.autosms.viewmodel.AddEditScheduleViewModelFactory
-import com.google.android.material.textfield.MaterialAutoCompleteTextView
 import com.google.android.material.timepicker.MaterialTimePicker
 import com.google.android.material.timepicker.TimeFormat
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.util.*
+import kotlinx.coroutines.launch
 
 class AddEditScheduleActivity : AppCompatActivity() {
 
@@ -38,21 +32,14 @@ class AddEditScheduleActivity : AppCompatActivity() {
     private var isEditMode = false
     private var scheduleId: Long = 0
     private var isContactMode = true
-    private var isCustomMessage = true
-    private var selectedMessageStyle = "friendly"
-    private var regenerateDaily = true
-    private lateinit var chatGptService: ChatGptService
 
     // Memory optimization: Use weak references and proper cleanup
-    private val contactPickerLauncher = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == RESULT_OK) {
-            result.data?.data?.let { uri ->
-                handleContactSelection(uri)
+    private val contactPickerLauncher =
+            registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+                if (result.resultCode == RESULT_OK) {
+                    result.data?.data?.let { uri -> handleContactSelection(uri) }
+                }
             }
-        }
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -83,9 +70,6 @@ class AddEditScheduleActivity : AppCompatActivity() {
 
     // Setup UI components and listeners
     private fun setupViews() {
-        // Initialize ChatGPT service
-        chatGptService = ChatGptService(this)
-        
         // Set current time as default
         val now = Calendar.getInstance()
         selectedHour = now.get(Calendar.HOUR_OF_DAY)
@@ -113,98 +97,48 @@ class AddEditScheduleActivity : AppCompatActivity() {
         // Set default selection to contact mode
         binding.toggleGroupContactType.check(R.id.buttonContactMode)
 
-        // Setup toggle group for message type
-        binding.toggleGroupMessageType.addOnButtonCheckedListener { group, checkedId, isChecked ->
-            if (isChecked) {
-                when (checkedId) {
-                    R.id.buttonCustomMessage -> {
-                        isCustomMessage = true
-                        binding.layoutCustomMessage.visibility = View.VISIBLE
-                        binding.layoutAiMessage.visibility = View.GONE
-                    }
-                    R.id.buttonAiMessage -> {
-                        isCustomMessage = false
-                        binding.layoutCustomMessage.visibility = View.GONE
-                        binding.layoutAiMessage.visibility = View.VISIBLE
-                        
-                        // Check if API key is configured. 
-                        if (!chatGptService.hasApiKey()) {
-                            Toast.makeText(this, "Please configure your OpenAI API key in Settings first", Toast.LENGTH_LONG).show()
+        binding.layoutCustomMessage.visibility = View.VISIBLE
+
+        binding.buttonSelectContact.setOnClickListener { openContactPicker() }
+
+        binding.buttonSelectTime.setOnClickListener { showTimePicker() }
+
+        binding.buttonSave.setOnClickListener { saveSchedule() }
+
+        binding.buttonCancel.setOnClickListener { finish() }
+
+        // Setup phone number input listener with debouncing
+        binding.editTextPhoneNumber.addTextChangedListener(
+                object : TextWatcher {
+                    private var lastText = ""
+
+                    override fun beforeTextChanged(
+                            s: CharSequence?,
+                            start: Int,
+                            count: Int,
+                            after: Int
+                    ) {}
+                    override fun onTextChanged(
+                            s: CharSequence?,
+                            start: Int,
+                            before: Int,
+                            count: Int
+                    ) {}
+                    override fun afterTextChanged(s: Editable?) {
+                        val phoneNumber = s.toString().trim()
+                        if (phoneNumber != lastText) {
+                            lastText = phoneNumber
+                            if (phoneNumber.isNotEmpty()) {
+                                binding.textPhoneNumberDisplay.text =
+                                        getString(R.string.phone_display_format, phoneNumber)
+                                binding.textPhoneNumberDisplay.visibility = View.VISIBLE
+                            } else {
+                                binding.textPhoneNumberDisplay.visibility = View.GONE
+                            }
                         }
                     }
                 }
-            }
-        }
-        // Set default selection to custom message
-        binding.toggleGroupMessageType.check(R.id.buttonCustomMessage)
-
-        // Setup message style dropdown
-        val styleLabelToValue = mapOf(
-            getString(R.string.friendly) to "friendly",
-            getString(R.string.professional) to "professional",
-            getString(R.string.funny) to "funny",
-            getString(R.string.romantic) to "romantic"
         )
-
-        // Ensure items are attached to dropdown
-        (binding.autoCompleteMessageStyle as MaterialAutoCompleteTextView).setSimpleItems(R.array.message_styles)
-
-        // Default selection
-        (binding.autoCompleteMessageStyle as MaterialAutoCompleteTextView).setText(
-            getString(R.string.friendly),
-            false
-        )
-        selectedMessageStyle = "friendly"
-
-        binding.autoCompleteMessageStyle.setOnItemClickListener { parent, _, position, _ ->
-            val label = parent.getItemAtPosition(position) as String
-            selectedMessageStyle = styleLabelToValue[label] ?: "friendly"
-        }
-
-        // Regenerate daily switch
-        binding.switchRegenerateDaily.setOnCheckedChangeListener { _, isChecked ->
-            regenerateDaily = isChecked
-        }
-
-        binding.buttonSelectContact.setOnClickListener {
-            openContactPicker()
-        }
-
-        binding.buttonSelectTime.setOnClickListener {
-            showTimePicker()
-        }
-
-        binding.buttonSave.setOnClickListener {
-            saveSchedule()
-        }
-
-        binding.buttonCancel.setOnClickListener {
-            finish()
-        }
-
-        binding.buttonGenerateMessage.setOnClickListener {
-            generateAiMessage()
-        }
-
-        // Setup phone number input listener with debouncing
-        binding.editTextPhoneNumber.addTextChangedListener(object : TextWatcher {
-            private var lastText = ""
-            
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-            override fun afterTextChanged(s: Editable?) {
-                val phoneNumber = s.toString().trim()
-                if (phoneNumber != lastText) {
-                    lastText = phoneNumber
-                    if (phoneNumber.isNotEmpty()) {
-                        binding.textPhoneNumberDisplay.text = getString(R.string.phone_display_format, phoneNumber)
-                        binding.textPhoneNumberDisplay.visibility = View.VISIBLE
-                    } else {
-                        binding.textPhoneNumberDisplay.visibility = View.GONE
-                    }
-                }
-            }
-        })
 
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
     }
@@ -219,40 +153,27 @@ class AddEditScheduleActivity : AppCompatActivity() {
 
             // Populate fields with existing data
             selectedContact = Pair(schedule.contactName, schedule.phoneNumber)
-            
+
             // Check if the contact name looks like a phone number (no spaces, mostly digits)
             val isPhoneNumber = schedule.contactName.matches(Regex("^[0-9+\\-\\(\\)\\s]+$"))
-            
+
             if (isPhoneNumber) {
                 // Switch to phone mode
                 binding.toggleGroupContactType.check(R.id.buttonPhoneMode)
                 binding.editTextPhoneNumber.setText(schedule.phoneNumber)
-                binding.textPhoneNumberDisplay.text = getString(R.string.phone_display_format, schedule.phoneNumber)
+                binding.textPhoneNumberDisplay.text =
+                        getString(R.string.phone_display_format, schedule.phoneNumber)
                 binding.textPhoneNumberDisplay.visibility = View.VISIBLE
             } else {
                 // Stay in contact mode
-                binding.textSelectedContact.text = "${schedule.contactName} (${schedule.phoneNumber})"
+                binding.textSelectedContact.text =
+                        "${schedule.contactName} (${schedule.phoneNumber})"
             }
-            
+
             binding.editTextMessage.setText(schedule.message)
             selectedHour = schedule.hour
             selectedMinute = schedule.minute
             updateTimeDisplay()
-
-            // If AI message, set dropdown to the saved style
-            if (schedule.isAiGenerated) {
-                val label = when (schedule.messageType.lowercase()) {
-                    "friendly" -> getString(R.string.friendly)
-                    "professional" -> getString(R.string.professional)
-                    "funny" -> getString(R.string.funny)
-                    "romantic" -> getString(R.string.romantic)
-                    else -> getString(R.string.friendly)
-                }
-                (binding.autoCompleteMessageStyle as MaterialAutoCompleteTextView).setText(label, false)
-                selectedMessageStyle = schedule.messageType
-                binding.switchRegenerateDaily.isChecked = schedule.regenerateDaily
-                regenerateDaily = schedule.regenerateDaily
-            }
         } else {
             title = "Add AutoSMS Schedule"
         }
@@ -271,8 +192,10 @@ class AddEditScheduleActivity : AppCompatActivity() {
             cursor = contentResolver.query(uri, null, null, null, null)
             cursor?.use {
                 if (it.moveToFirst()) {
-                    val nameIndex = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
-                    val numberIndex = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
+                    val nameIndex =
+                            it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
+                    val numberIndex =
+                            it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
 
                     if (nameIndex != -1 && numberIndex != -1) {
                         val contactName = it.getString(nameIndex)
@@ -281,12 +204,18 @@ class AddEditScheduleActivity : AppCompatActivity() {
                         selectedContact = Pair(contactName, phoneNumber)
                         binding.textSelectedContact.text = "$contactName ($phoneNumber)"
                     } else {
-                        Toast.makeText(this, "Unable to retrieve contact details", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                                        this,
+                                        "Unable to retrieve contact details",
+                                        Toast.LENGTH_SHORT
+                                )
+                                .show()
                     }
                 }
             }
         } catch (e: Exception) {
-            Toast.makeText(this, "Error retrieving contact: ${e.message}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Error retrieving contact: ${e.message}", Toast.LENGTH_SHORT)
+                    .show()
         } finally {
             cursor?.close()
         }
@@ -294,12 +223,13 @@ class AddEditScheduleActivity : AppCompatActivity() {
 
     // Show time picker dialog for selecting schedule time
     private fun showTimePicker() {
-        val timePicker = MaterialTimePicker.Builder()
-            .setTimeFormat(TimeFormat.CLOCK_12H)
-            .setHour(selectedHour)
-            .setMinute(selectedMinute)
-            .setTitleText("Select time")
-            .build()
+        val timePicker =
+                MaterialTimePicker.Builder()
+                        .setTimeFormat(TimeFormat.CLOCK_12H)
+                        .setHour(selectedHour)
+                        .setMinute(selectedMinute)
+                        .setTitleText("Select time")
+                        .build()
 
         timePicker.addOnPositiveButtonClickListener {
             selectedHour = timePicker.hour
@@ -312,66 +242,12 @@ class AddEditScheduleActivity : AppCompatActivity() {
 
     // Update time display in UI
     private fun updateTimeDisplay() {
-        val hourStr = if (selectedHour == 0) "12" else if (selectedHour > 12) "${selectedHour - 12}" else "$selectedHour"
+        val hourStr =
+                if (selectedHour == 0) "12"
+                else if (selectedHour > 12) "${selectedHour - 12}" else "$selectedHour"
         val minuteStr = if (selectedMinute < 10) "0$selectedMinute" else "$selectedMinute"
         val amPm = if (selectedHour < 12) "AM" else "PM"
         binding.textSelectedTime.text = "$hourStr:$minuteStr $amPm"
-    }
-
-    // Generate AI message using ChatGPT
-    private fun generateAiMessage() {
-        val contactName = if (isContactMode) {
-            selectedContact?.first ?: run {
-                Toast.makeText(this, "Please select a contact first", Toast.LENGTH_SHORT).show()
-                return
-            }
-        } else {
-            val phoneNumber = binding.editTextPhoneNumber.text.toString().trim()
-            if (phoneNumber.isEmpty()) {
-                Toast.makeText(this, "Please enter a phone number first", Toast.LENGTH_SHORT).show()
-                return
-            }
-            phoneNumber
-        }
-
-        if (!chatGptService.hasApiKey()) {
-            Toast.makeText(this, "Please configure your OpenAI API key in Settings first", Toast.LENGTH_LONG).show()
-            return
-        }
-
-        binding.buttonGenerateMessage.isEnabled = false
-        binding.buttonGenerateMessage.text = "Generating..."
-
-        val context = binding.editTextContext.text.toString().trim()
-
-        CoroutineScope(Dispatchers.Main).launch {
-            try {
-                val result = if (context.isNotEmpty()) {
-                    chatGptService.generateMessageWithContext(contactName, context, 100)
-                } else {
-                    chatGptService.generateRandomMessage(contactName, selectedMessageStyle, 100)
-                }
-
-                if (result.isSuccess) {
-                    val generatedMessage = result.getOrNull() ?: ""
-                    binding.textGeneratedMessage.text = generatedMessage
-                    binding.textGeneratedMessage.visibility = View.VISIBLE
-                    
-                    // Auto-fill the custom message field with the generated message
-                    binding.editTextMessage.setText(generatedMessage)
-                    
-                    Toast.makeText(this@AddEditScheduleActivity, "Message generated successfully!", Toast.LENGTH_SHORT).show()
-                } else {
-                    val errorMessage = result.exceptionOrNull()?.message ?: "Failed to generate message"
-                    Toast.makeText(this@AddEditScheduleActivity, "Error: $errorMessage", Toast.LENGTH_LONG).show()
-                }
-            } catch (e: Exception) {
-                Toast.makeText(this@AddEditScheduleActivity, "Error: ${e.message}", Toast.LENGTH_LONG).show()
-            } finally {
-                binding.buttonGenerateMessage.isEnabled = true
-                binding.buttonGenerateMessage.text = "Generate Message"
-            }
-        }
     }
 
     // Save or update the schedule
@@ -383,7 +259,8 @@ class AddEditScheduleActivity : AppCompatActivity() {
         if (isContactMode) {
             val contact = selectedContact
             if (contact == null) {
-                Toast.makeText(this, getString(R.string.please_select_contact), Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.please_select_contact), Toast.LENGTH_SHORT)
+                        .show()
                 return
             }
             contactName = contact.first
@@ -391,35 +268,42 @@ class AddEditScheduleActivity : AppCompatActivity() {
         } else {
             phoneNumber = binding.editTextPhoneNumber.text.toString().trim()
             if (phoneNumber.isEmpty()) {
-                Toast.makeText(this, getString(R.string.please_enter_phone_number), Toast.LENGTH_SHORT).show()
+                Toast.makeText(
+                                this,
+                                getString(R.string.please_enter_phone_number),
+                                Toast.LENGTH_SHORT
+                        )
+                        .show()
                 return
             }
             // Validate phone number format
             if (!isValidPhoneNumber(phoneNumber)) {
-                Toast.makeText(this, getString(R.string.please_enter_valid_phone_number), Toast.LENGTH_SHORT).show()
+                Toast.makeText(
+                                this,
+                                getString(R.string.please_enter_valid_phone_number),
+                                Toast.LENGTH_SHORT
+                        )
+                        .show()
                 return
             }
             contactName = phoneNumber // Use phone number as contact name for non-contacts
         }
 
-        if (isCustomMessage && message.isEmpty()) {
+        if (message.isEmpty()) {
             Toast.makeText(this, "Please enter a message", Toast.LENGTH_SHORT).show()
             return
         }
 
-        val schedule = SmsSchedule(
-            id = if (isEditMode) scheduleId else 0,
-            contactName = contactName,
-            phoneNumber = phoneNumber,
-            message = message,
-            hour = selectedHour,
-            minute = selectedMinute,
-            isEnabled = true,
-            isAiGenerated = !isCustomMessage,
-            regenerateDaily = if (!isCustomMessage) regenerateDaily else false,
-            messageType = if (isCustomMessage) "custom" else selectedMessageStyle,
-            messageContext = if (isCustomMessage) "" else binding.editTextContext.text.toString().trim()
-        )
+        val schedule =
+                SmsSchedule(
+                        id = if (isEditMode) scheduleId else 0,
+                        contactName = contactName,
+                        phoneNumber = phoneNumber,
+                        message = message,
+                        hour = selectedHour,
+                        minute = selectedMinute,
+                        isEnabled = true
+                )
 
         if (isEditMode) {
             viewModel.updateSchedule(schedule)
@@ -436,7 +320,8 @@ class AddEditScheduleActivity : AppCompatActivity() {
     private fun isValidPhoneNumber(phoneNumber: String): Boolean {
         // Remove all non-digit characters for validation
         val digitsOnly = phoneNumber.replace(Regex("[^0-9]"), "")
-        // Basic validation: ensure it has at least 3 digits (allows local numbers, shortcodes, etc.)
+        // Basic validation: ensure it has at least 3 digits (allows local numbers, shortcodes,
+        // etc.)
         return digitsOnly.length >= 3
     }
 
