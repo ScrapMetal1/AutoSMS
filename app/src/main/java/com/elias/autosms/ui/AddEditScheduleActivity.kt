@@ -8,9 +8,11 @@ import android.provider.ContactsContract
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
+import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.IntentCompat
 import androidx.lifecycle.ViewModelProvider
 import com.elias.autosms.R
 import com.elias.autosms.data.SmsSchedule
@@ -20,20 +22,27 @@ import com.elias.autosms.viewmodel.AddEditScheduleViewModelFactory
 import com.google.android.material.timepicker.MaterialTimePicker
 import com.google.android.material.timepicker.TimeFormat
 import java.util.*
-import kotlinx.coroutines.launch
 
 class AddEditScheduleActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityAddEditScheduleBinding
     private lateinit var viewModel: AddEditScheduleViewModel
+
+    // contact name and number. null if not selected
     private var selectedContact: Pair<String, String>? = null
+
+    // time selection - default to 9:00 am
     private var selectedHour = 9
     private var selectedMinute = 0
+
+    // create or edit mode?
     private var isEditMode = false
+
     private var scheduleId: Long = 0
     private var isContactMode = true
+    private var originalCreatedAt: Long = System.currentTimeMillis()
 
-    // Memory optimization: Use weak references and proper cleanup
+    // handle result from contact picker
     private val contactPickerLauncher =
             registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
                 if (result.resultCode == RESULT_OK) {
@@ -53,31 +62,26 @@ class AddEditScheduleActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        // Clean up resources to prevent memory leaks
         cleanupResources()
     }
 
     private fun cleanupResources() {
-        // Clear any references that might cause memory leaks
         selectedContact = null
     }
 
-    // Initialize ViewModel with factory
     private fun setupViewModel() {
         val factory = AddEditScheduleViewModelFactory(application)
         viewModel = ViewModelProvider(this, factory)[AddEditScheduleViewModel::class.java]
     }
 
-    // Setup UI components and listeners
     private fun setupViews() {
-        // Set current time as default
         val now = Calendar.getInstance()
         selectedHour = now.get(Calendar.HOUR_OF_DAY)
         selectedMinute = now.get(Calendar.MINUTE)
         updateTimeDisplay()
 
-        // Setup toggle group for contact/phone mode
-        binding.toggleGroupContactType.addOnButtonCheckedListener { group, checkedId, isChecked ->
+        // handle contact vs phone number mode toggle
+        binding.toggleGroupContactType.addOnButtonCheckedListener { _, checkedId, isChecked ->
             if (isChecked) {
                 when (checkedId) {
                     R.id.buttonContactMode -> {
@@ -94,20 +98,15 @@ class AddEditScheduleActivity : AppCompatActivity() {
             }
         }
 
-        // Set default selection to contact mode
         binding.toggleGroupContactType.check(R.id.buttonContactMode)
-
         binding.layoutCustomMessage.visibility = View.VISIBLE
 
         binding.buttonSelectContact.setOnClickListener { openContactPicker() }
-
         binding.buttonSelectTime.setOnClickListener { showTimePicker() }
-
         binding.buttonSave.setOnClickListener { saveSchedule() }
-
         binding.buttonCancel.setOnClickListener { finish() }
 
-        // Setup phone number input listener with debouncing
+        // debounced phone number input listener
         binding.editTextPhoneNumber.addTextChangedListener(
                 object : TextWatcher {
                     private var lastText = ""
@@ -124,10 +123,13 @@ class AddEditScheduleActivity : AppCompatActivity() {
                             before: Int,
                             count: Int
                     ) {}
+
                     override fun afterTextChanged(s: Editable?) {
                         val phoneNumber = s.toString().trim()
+
                         if (phoneNumber != lastText) {
                             lastText = phoneNumber
+
                             if (phoneNumber.isNotEmpty()) {
                                 binding.textPhoneNumberDisplay.text =
                                         getString(R.string.phone_display_format, phoneNumber)
@@ -140,32 +142,78 @@ class AddEditScheduleActivity : AppCompatActivity() {
                 }
         )
 
+        // Setup frequency dropdown adapter
+        val frequencyOptions = resources.getStringArray(R.array.frequency_options)
+        val frequencyAdapter =
+                ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, frequencyOptions)
+        binding.autoCompleteFrequency.setAdapter(frequencyAdapter)
+
+        // Setup period unit dropdown adapter
+        val unitOptions = resources.getStringArray(R.array.period_units_options)
+        val unitAdapter =
+                ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, unitOptions)
+        binding.autoCompletePeriodUnit.setAdapter(unitAdapter)
+
+        // Handle frequency selection changes to show/hide custom period fields
+        binding.autoCompleteFrequency.setOnItemClickListener { _, _, position, _ ->
+            val selectedFrequency = frequencyOptions[position]
+            if (selectedFrequency == SmsSchedule.FREQUENCY_CUSTOM &&
+                            binding.switchRecurring.isChecked
+            ) {
+                binding.layoutCustomPeriod.visibility = View.VISIBLE
+            } else {
+                binding.layoutCustomPeriod.visibility = View.GONE
+            }
+        }
+
+        binding.switchRecurring.setOnCheckedChangeListener { _, isChecked ->
+            binding.inputLayoutFrequency.isEnabled = isChecked
+            binding.inputLayoutCustomPeriod.isEnabled = isChecked
+            binding.inputLayoutPeriodUnit.isEnabled = isChecked
+
+            val alpha = if (isChecked) 1.0f else 0.5f
+            binding.inputLayoutFrequency.alpha = alpha
+            binding.layoutCustomPeriod.alpha = alpha
+
+            // Show/hide custom recurrence fields based on current frequency selection
+            if (isChecked &&
+                            binding.autoCompleteFrequency.text.toString() ==
+                                    SmsSchedule.FREQUENCY_CUSTOM
+            ) {
+                binding.layoutCustomPeriod.visibility = View.VISIBLE
+            } else {
+                binding.layoutCustomPeriod.visibility = View.GONE
+            }
+        }
+
+        binding.switchRecurring.isChecked = false
+        binding.inputLayoutFrequency.isEnabled = false
+        binding.inputLayoutFrequency.alpha = 0.5f
+
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
     }
 
-    // Handle incoming intent for edit mode
     private fun handleIntent() {
-        val schedule = intent.getParcelableExtra<SmsSchedule>("schedule")
+        val schedule = IntentCompat.getParcelableExtra(intent, "schedule", SmsSchedule::class.java)
+
         if (schedule != null) {
             isEditMode = true
             scheduleId = schedule.id
+            originalCreatedAt = schedule.createdAt
             title = "Edit AutoSMS Schedule"
 
-            // Populate fields with existing data
             selectedContact = Pair(schedule.contactName, schedule.phoneNumber)
 
-            // Check if the contact name looks like a phone number (no spaces, mostly digits)
+            // check if name looks like a phone number (manual entry vs contact pick)
             val isPhoneNumber = schedule.contactName.matches(Regex("^[0-9+\\-\\(\\)\\s]+$"))
 
             if (isPhoneNumber) {
-                // Switch to phone mode
                 binding.toggleGroupContactType.check(R.id.buttonPhoneMode)
                 binding.editTextPhoneNumber.setText(schedule.phoneNumber)
                 binding.textPhoneNumberDisplay.text =
                         getString(R.string.phone_display_format, schedule.phoneNumber)
                 binding.textPhoneNumberDisplay.visibility = View.VISIBLE
             } else {
-                // Stay in contact mode
                 binding.textSelectedContact.text =
                         "${schedule.contactName} (${schedule.phoneNumber})"
             }
@@ -174,22 +222,38 @@ class AddEditScheduleActivity : AppCompatActivity() {
             selectedHour = schedule.hour
             selectedMinute = schedule.minute
             updateTimeDisplay()
+
+            // --- fill in frequency, unit, and recurring state ---
+            binding.switchRecurring.isChecked = schedule.isRecurring
+
+            binding.inputLayoutFrequency.isEnabled = schedule.isRecurring
+            binding.inputLayoutFrequency.alpha = if (schedule.isRecurring) 1.0f else 0.5f
+
+            binding.autoCompleteFrequency.setText(schedule.frequency, false)
+
+            if (schedule.frequency == SmsSchedule.FREQUENCY_CUSTOM) {
+                if (schedule.isRecurring) binding.layoutCustomPeriod.visibility = View.VISIBLE
+                binding.editTextCustomPeriod.setText(schedule.period.toString())
+                binding.autoCompletePeriodUnit.setText(schedule.periodUnit, false)
+            } else {
+                binding.layoutCustomPeriod.visibility = View.GONE
+            }
         } else {
             title = "Add AutoSMS Schedule"
         }
     }
 
-    // Launch contact picker to select a contact
     private fun openContactPicker() {
         val intent = Intent(Intent.ACTION_PICK, ContactsContract.CommonDataKinds.Phone.CONTENT_URI)
         contactPickerLauncher.launch(intent)
     }
 
-    // Process selected contact data with proper cursor management
     private fun handleContactSelection(uri: Uri) {
         var cursor: Cursor? = null
+
         try {
             cursor = contentResolver.query(uri, null, null, null, null)
+
             cursor?.use {
                 if (it.moveToFirst()) {
                     val nameIndex =
@@ -202,6 +266,7 @@ class AddEditScheduleActivity : AppCompatActivity() {
                         val phoneNumber = it.getString(numberIndex)
 
                         selectedContact = Pair(contactName, phoneNumber)
+
                         binding.textSelectedContact.text = "$contactName ($phoneNumber)"
                     } else {
                         Toast.makeText(
@@ -221,7 +286,6 @@ class AddEditScheduleActivity : AppCompatActivity() {
         }
     }
 
-    // Show time picker dialog for selecting schedule time
     private fun showTimePicker() {
         val timePicker =
                 MaterialTimePicker.Builder()
@@ -240,33 +304,37 @@ class AddEditScheduleActivity : AppCompatActivity() {
         timePicker.show(supportFragmentManager, "TIME_PICKER")
     }
 
-    // Update time display in UI
     private fun updateTimeDisplay() {
         val hourStr =
                 if (selectedHour == 0) "12"
                 else if (selectedHour > 12) "${selectedHour - 12}" else "$selectedHour"
+
         val minuteStr = if (selectedMinute < 10) "0$selectedMinute" else "$selectedMinute"
         val amPm = if (selectedHour < 12) "AM" else "PM"
+
         binding.textSelectedTime.text = "$hourStr:$minuteStr $amPm"
     }
 
-    // Save or update the schedule
     private fun saveSchedule() {
         val message = binding.editTextMessage.text.toString().trim()
-        var contactName = ""
-        var phoneNumber = ""
+
+        var contactName: String
+        var phoneNumber: String
 
         if (isContactMode) {
             val contact = selectedContact
+
             if (contact == null) {
                 Toast.makeText(this, getString(R.string.please_select_contact), Toast.LENGTH_SHORT)
                         .show()
                 return
             }
+
             contactName = contact.first
             phoneNumber = contact.second
         } else {
             phoneNumber = binding.editTextPhoneNumber.text.toString().trim()
+
             if (phoneNumber.isEmpty()) {
                 Toast.makeText(
                                 this,
@@ -276,7 +344,7 @@ class AddEditScheduleActivity : AppCompatActivity() {
                         .show()
                 return
             }
-            // Validate phone number format
+
             if (!isValidPhoneNumber(phoneNumber)) {
                 Toast.makeText(
                                 this,
@@ -286,12 +354,27 @@ class AddEditScheduleActivity : AppCompatActivity() {
                         .show()
                 return
             }
-            contactName = phoneNumber // Use phone number as contact name for non-contacts
+
+            // for manual entries, use phone number as contact name
+            contactName = phoneNumber
         }
 
         if (message.isEmpty()) {
             Toast.makeText(this, "Please enter a message", Toast.LENGTH_SHORT).show()
             return
+        }
+
+        val isRecurring = binding.switchRecurring.isChecked
+        val frequency = binding.autoCompleteFrequency.text.toString()
+        val periodUnit = binding.autoCompletePeriodUnit.text.toString()
+
+        var period = 1
+        if (frequency == SmsSchedule.FREQUENCY_CUSTOM) {
+            val periodStr = binding.editTextCustomPeriod.text.toString()
+            if (periodStr.isNotEmpty()) {
+                period = periodStr.toIntOrNull() ?: 1
+                if (period < 1) period = 1
+            }
         }
 
         val schedule =
@@ -302,7 +385,12 @@ class AddEditScheduleActivity : AppCompatActivity() {
                         message = message,
                         hour = selectedHour,
                         minute = selectedMinute,
-                        isEnabled = true
+                        frequency = frequency,
+                        period = period,
+                        periodUnit = periodUnit,
+                        isRecurring = isRecurring,
+                        isEnabled = true,
+                        createdAt = originalCreatedAt
                 )
 
         if (isEditMode) {
@@ -316,17 +404,15 @@ class AddEditScheduleActivity : AppCompatActivity() {
         finish()
     }
 
-    // Validate phone number format
     private fun isValidPhoneNumber(phoneNumber: String): Boolean {
-        // Remove all non-digit characters for validation
         val digitsOnly = phoneNumber.replace(Regex("[^0-9]"), "")
-        // Basic validation: ensure it has at least 3 digits (allows local numbers, shortcodes,
-        // etc.)
+
+        // ensure at least 3 digits
         return digitsOnly.length >= 3
     }
 
     override fun onSupportNavigateUp(): Boolean {
-        onBackPressed()
+        onBackPressedDispatcher.onBackPressed()
         return true
     }
 }

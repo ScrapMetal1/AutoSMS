@@ -21,16 +21,12 @@ class SmsScheduleRepository(context: Context) {
 
     // Retrieve enabled schedules for background processing
     suspend fun getEnabledSchedules(): List<SmsSchedule> {
-        return withContext(Dispatchers.IO) {
-            smsScheduleDao.getEnabledSchedules()
-        }
+        return withContext(Dispatchers.IO) { smsScheduleDao.getEnabledSchedules() }
     }
 
     // Retrieve a specific schedule by ID
     suspend fun getScheduleById(id: Long): SmsSchedule? {
-        return withContext(Dispatchers.IO) {
-            smsScheduleDao.getScheduleById(id)
-        }
+        return withContext(Dispatchers.IO) { smsScheduleDao.getScheduleById(id) }
     }
 
     // Insert a new schedule and schedule its work if enabled
@@ -48,9 +44,35 @@ class SmsScheduleRepository(context: Context) {
     // Update an existing schedule and reschedule its work
     suspend fun update(schedule: SmsSchedule) {
         withContext(Dispatchers.IO) {
+            // Fetch the old schedule to compare time settings
+            val oldSchedule = smsScheduleDao.getScheduleById(schedule.id)
+
             smsScheduleDao.update(schedule)
             smsScheduleManager.cancelWork(schedule.id)
+
             if (schedule.isEnabled) {
+                // If the schedule is NOT recurring, check if it's in the past
+                if (!schedule.isRecurring) {
+                    val delay = smsScheduleManager.calculateInitialDelay(schedule)
+                    if (delay < 0) {
+                        // It is in the past. Check if the user changed the time.
+                        // If the time is the same as before, we assume the user is just disabling
+                        // repetition
+                        // on an already completed event, so we should NOT re-send (duplicate).
+                        if (oldSchedule != null &&
+                                        oldSchedule.hour == schedule.hour &&
+                                        oldSchedule.minute == schedule.minute
+                        ) {
+                            android.util.Log.d(
+                                    "SmsRepo",
+                                    "Disabling past non-recurring schedule to prevent duplicate send."
+                            )
+                            smsScheduleDao.updateEnabled(schedule.id, false)
+                            return@withContext
+                        }
+                    }
+                }
+
                 smsScheduleManager.scheduleRepeatingWork(schedule)
             }
         }

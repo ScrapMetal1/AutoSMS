@@ -73,6 +73,36 @@
             android:ellipsize="end"
             tools:text="This is a sample SMS message that will be sent daily at the scheduled time." />
 
+                <!-- Recurring Indicator -->
+        <LinearLayout
+            android:id="@+id/layoutRecurringInfo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="8dp"
+            android:visibility="gone"
+            tools:visibility="visible">
+
+            <ImageView
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:src="@drawable/ic_repeat"
+                app:tint="?attr/colorPrimary"
+                android:layout_marginEnd="4dp" />
+
+            <TextView
+                android:id="@+id/textFrequency"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="12sp"
+                android:textColor="?attr/colorPrimary"
+                android:textStyle="bold"
+                tools:text="Daily" />
+
+        </LinearLayout>
+
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

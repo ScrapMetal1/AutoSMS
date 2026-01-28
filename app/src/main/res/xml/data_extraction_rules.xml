@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <data-extraction-rules>
     <cloud-backup>
+        <!-- Include the SMS schedule database for backup -->
         <include domain="database" path="sms_schedule_database" />
-        <exclude domain="sharedpref" path="." />
     </cloud-backup>
 </data-extraction-rules>

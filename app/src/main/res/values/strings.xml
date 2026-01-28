@@ -23,4 +23,22 @@
     <string name="save">Save</string>
     <string name="cancel">Cancel</string>
     <string name="settings">Settings</string>
+
+    <!-- Frequency Options -->
+    <string name="frequency">Frequency</string>
+    <string name="custom_frequency_days">Days Interval</string>
+
+    <string-array name="frequency_options">
+        <item>Hourly</item> <!-- New Option -->
+        <item>Daily</item>
+        <item>Weekly</item>
+        <item>Monthly</item>
+        <item>Custom</item>
+    </string-array>
+
+    <!-- Custom Period Unit Options -->
+    <string-array name="period_units_options">
+        <item>Days</item>
+        <item>Hours</item>
+    </string-array>
 </resources>

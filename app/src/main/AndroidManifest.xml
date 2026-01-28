@@ -13,13 +13,17 @@
     <!-- Optional permission for better reliability -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
+    <!-- Declare telephony feature as not required for ChromeOS compatibility -->
+    <uses-feature android:name="android.hardware.telephony" android:required="false" />
+
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@mipmap/ic_autosms"
         android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_launcher_round"
+        android:roundIcon="@mipmap/ic_autosms_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.AutoSMS.NoActionBar"
         android:largeHeap="false"

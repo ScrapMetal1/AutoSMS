@@ -1,5 +1,5 @@
 package com.elias.autosms.ui.adapter
-
+import android.view.View
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
@@ -61,6 +61,20 @@ class SmsScheduleAdapter(
 
                 buttonDelete.setOnClickListener {
                     onDeleteClick(schedule)
+                }
+
+                // Recurring Info Logic
+                if (schedule.isRecurring) {
+                    layoutRecurringInfo.visibility = android.view.View.VISIBLE
+                    
+                    val frequencyText = if (schedule.frequency == SmsSchedule.FREQUENCY_CUSTOM) {
+                        "Every ${schedule.period} ${schedule.periodUnit}"
+                    } else {
+                        schedule.frequency
+                    }
+                    textFrequency.text = frequencyText
+                } else {
+                    layoutRecurringInfo.visibility = android.view.View.GONE
                 }
             }
         }

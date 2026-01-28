@@ -5,7 +5,7 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Database(entities = [SmsSchedule::class], version = 5, exportSchema = false)
+@Database(entities = [SmsSchedule::class], version = 6, exportSchema = false)
 abstract class SmsScheduleDatabase : RoomDatabase() {
 
     abstract fun smsScheduleDao(): SmsScheduleDao

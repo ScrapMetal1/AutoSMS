@@ -17,7 +17,9 @@ class SmsScheduleManager(private val context: Context) {
         val workName = "sms_work_${schedule.id}"
 
         // Calculate initial delay until next occurrence
-        val initialDelay = calculateInitialDelay(schedule.hour, schedule.minute)
+        val initialDelay = calculateInitialDelay(schedule)
+
+        val scheduledTime = System.currentTimeMillis() + initialDelay
 
         // Create input data for the worker
         val inputData =
@@ -26,8 +28,7 @@ class SmsScheduleManager(private val context: Context) {
                         "contactName" to schedule.contactName,
                         "phoneNumber" to schedule.phoneNumber,
                         "message" to schedule.message,
-                        "hour" to schedule.hour,
-                        "minute" to schedule.minute
+                        "scheduled_time" to scheduledTime,
                 )
 
         // Create one-time work request for the next occurrence
@@ -62,27 +63,59 @@ class SmsScheduleManager(private val context: Context) {
     }
 
     // Calculates delay until the next occurrence of the scheduled time
-    private fun calculateInitialDelay(hour: Int, minute: Int): Long {
+    fun calculateInitialDelay(schedule: SmsSchedule): Long {
         val now = Calendar.getInstance()
-        val target =
-                Calendar.getInstance().apply {
-                    set(Calendar.HOUR_OF_DAY, hour)
-                    set(Calendar.MINUTE, minute)
-                    set(Calendar.SECOND, 0)
-                    set(Calendar.MILLISECOND, 0)
-                }
 
-        // If target time has passed today, schedule for tomorrow
-        if (target.timeInMillis <= now.timeInMillis) {
-            target.add(Calendar.DAY_OF_YEAR, 1)
+        // We use the original creation date (and configured time) as the anchor
+        // to prevent schedule drift (e.g. keeping "Mondays" as Mondays, or "XX:00" as "XX:00").
+        val anchor = Calendar.getInstance()
+        anchor.timeInMillis = schedule.createdAt
+        anchor.set(Calendar.HOUR_OF_DAY, schedule.hour)
+        anchor.set(Calendar.MINUTE, schedule.minute)
+        anchor.set(Calendar.SECOND, 0)
+        anchor.set(Calendar.MILLISECOND, 0)
+
+        // Capture the original day of month for monthly calculations to prevent drift
+        // (e.g. Jan 31 -> Feb 28 -> Mar 28 avoidance)
+        val originalDayOfMonth = anchor.get(Calendar.DAY_OF_MONTH)
+
+        // Iterate until we find the NEXT valid occurrence after 'now'
+        // ONLY if the schedule is recurring. If it's one-time, we stick to the original anchor.
+        if (schedule.isRecurring) {
+            while (anchor.timeInMillis <= now.timeInMillis) {
+                when (schedule.frequency) {
+                    SmsSchedule.FREQUENCY_HOURLY -> {
+                        anchor.add(Calendar.HOUR_OF_DAY, 1)
+                    }
+                    SmsSchedule.FREQUENCY_DAILY -> {
+                        anchor.add(Calendar.DAY_OF_YEAR, 1)
+                    }
+                    SmsSchedule.FREQUENCY_WEEKLY -> {
+                        anchor.add(Calendar.DAY_OF_YEAR, 7)
+                    }
+                    SmsSchedule.FREQUENCY_MONTHLY -> {
+                        // Add month(s)
+                        anchor.add(Calendar.MONTH, 1)
+
+                        // Handle Day-of-Month Drift (e.g. 31st -> 28th -> 31st)
+                        val maxDay = anchor.getActualMaximum(Calendar.DAY_OF_MONTH)
+                        val targetDay =
+                                if (originalDayOfMonth > maxDay) maxDay else originalDayOfMonth
+                        anchor.set(Calendar.DAY_OF_MONTH, targetDay)
+                    }
+                    SmsSchedule.FREQUENCY_CUSTOM -> {
+                        val p = if (schedule.period < 1) 1 else schedule.period
+                        if (schedule.periodUnit == SmsSchedule.UNIT_HOURS) {
+                            anchor.add(Calendar.HOUR_OF_DAY, p)
+                        } else {
+                            anchor.add(Calendar.DAY_OF_YEAR, p)
+                        }
+                    }
+                    else -> anchor.add(Calendar.DAY_OF_YEAR, 1) // Default to Daily
+                }
+            }
         }
 
-        return target.timeInMillis - now.timeInMillis
+        return anchor.timeInMillis - now.timeInMillis
     }
 }
-
-// i5t5mp14s1;4,ovn:w0:q.9 v : [30]
-// .29tyvu0 ;eb4cg2 .4eqs0 [25]
-// ,8dg,bp1eus.y;wjkaq 8 k [55]
-// stowa6 [33]
-// 2,x3tui.rfn1fruku1dw.,euo4xswp,230k36 [46]

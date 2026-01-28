@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <full-backup-content>
+    <!-- Include the SMS schedule database for backup -->
     <include domain="database" path="sms_schedule_database" />
-    <exclude domain="sharedpref" path="." />
 </full-backup-content>
