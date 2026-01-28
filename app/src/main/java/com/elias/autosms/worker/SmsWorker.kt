@@ -85,7 +85,10 @@ class SmsWorker(context: Context, params: WorkerParameters) : CoroutineWorker(co
                         Log.d("SmsWorker", "Rescheduling next execution for schedule $scheduleId")
                         val smsScheduleManager =
                                 com.elias.autosms.utils.SmsScheduleManager(applicationContext)
-                        smsScheduleManager.scheduleRepeatingWork(currentSchedule)
+                        smsScheduleManager.scheduleRepeatingWork(
+                                currentSchedule,
+                                isRescheduleForNextInterval = true
+                        )
                     } else if (smsSentSuccessfully) {
                         // Non-recurring and sent successfully: disable to prevent re-sends
                         Log.d(

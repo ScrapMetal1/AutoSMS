@@ -320,6 +320,19 @@
 
                 </LinearLayout>
 
+                <TextView
+                    android:id="@+id/textHourlyWarning"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Note: Repeating starts at the exact scheduled time."
+                    android:textSize="12sp"
+                    android:textColor="?android:attr/textColorSecondary"
+                    android:layout_marginTop="8dp"
+                    android:fontFamily="sans-serif-medium"
+                    android:visibility="gone"
+                    android:background="#1F000000"
+                    android:padding="8dp"/>
+
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 

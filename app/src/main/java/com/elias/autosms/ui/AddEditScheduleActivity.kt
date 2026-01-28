@@ -164,6 +164,11 @@ class AddEditScheduleActivity : AppCompatActivity() {
             } else {
                 binding.layoutCustomPeriod.visibility = View.GONE
             }
+            updateRecurrenceWarning()
+        }
+
+        binding.autoCompletePeriodUnit.setOnItemClickListener { _, _, _, _ ->
+            updateRecurrenceWarning()
         }
 
         binding.switchRecurring.setOnCheckedChangeListener { _, isChecked ->
@@ -184,11 +189,14 @@ class AddEditScheduleActivity : AppCompatActivity() {
             } else {
                 binding.layoutCustomPeriod.visibility = View.GONE
             }
+            updateRecurrenceWarning()
         }
 
         binding.switchRecurring.isChecked = false
         binding.inputLayoutFrequency.isEnabled = false
         binding.inputLayoutFrequency.alpha = 0.5f
+
+        updateRecurrenceWarning()
 
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
     }
@@ -238,6 +246,7 @@ class AddEditScheduleActivity : AppCompatActivity() {
             } else {
                 binding.layoutCustomPeriod.visibility = View.GONE
             }
+            updateRecurrenceWarning()
         } else {
             title = "Add AutoSMS Schedule"
         }
@@ -313,6 +322,23 @@ class AddEditScheduleActivity : AppCompatActivity() {
         val amPm = if (selectedHour < 12) "AM" else "PM"
 
         binding.textSelectedTime.text = "$hourStr:$minuteStr $amPm"
+    }
+
+    private fun updateRecurrenceWarning() {
+        val isRecurring = binding.switchRecurring.isChecked
+        val frequency = binding.autoCompleteFrequency.text.toString()
+        val unit = binding.autoCompletePeriodUnit.text.toString()
+
+        val isHourly =
+                frequency == SmsSchedule.FREQUENCY_HOURLY ||
+                        (frequency == SmsSchedule.FREQUENCY_CUSTOM &&
+                                unit == SmsSchedule.UNIT_HOURS)
+
+        if (isRecurring && isHourly) {
+            binding.textHourlyWarning.visibility = View.VISIBLE
+        } else {
+            binding.textHourlyWarning.visibility = View.GONE
+        }
     }
 
     private fun saveSchedule() {

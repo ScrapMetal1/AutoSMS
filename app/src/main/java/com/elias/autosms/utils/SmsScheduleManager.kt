@@ -13,11 +13,29 @@ class SmsScheduleManager(private val context: Context) {
     private val workManager = WorkManager.getInstance(context)
 
     // Schedules a daily recurring SMS work request
-    fun scheduleRepeatingWork(schedule: SmsSchedule) {
+    fun scheduleRepeatingWork(schedule: SmsSchedule, isRescheduleForNextInterval: Boolean = false) {
         val workName = "sms_work_${schedule.id}"
 
         // Calculate initial delay until next occurrence
-        val initialDelay = calculateInitialDelay(schedule)
+        val initialDelay =
+                if (!isRescheduleForNextInterval &&
+                                (schedule.frequency == SmsSchedule.FREQUENCY_HOURLY ||
+                                        (schedule.frequency == SmsSchedule.FREQUENCY_CUSTOM &&
+                                                schedule.periodUnit == SmsSchedule.UNIT_HOURS))
+                ) {
+                    // Manual/UI Trigger for High-Frequency (Hourly) Schedule.
+                    // Constraint: "Start repeating at the scheduled time" relative to Day.
+                    // We DO NOT want to jump into the middle of an hourly sequence (e.g. 10am,
+                    // 11am)
+                    // if we missed the start. We want to wait for the next "clean" Daily start
+                    // time.
+                    // We temporarily treat it as DAILY to find the anchor point.
+                    calculateInitialDelay(schedule.copy(frequency = SmsSchedule.FREQUENCY_DAILY))
+                } else {
+                    // Standard Logic: Worker logic (continue sequence) or Low-Frequency
+                    // (Daily/Weekly)
+                    calculateInitialDelay(schedule)
+                }
 
         val scheduledTime = System.currentTimeMillis() + initialDelay
 
@@ -51,7 +69,7 @@ class SmsScheduleManager(private val context: Context) {
 
         Log.d(
                 "SmsScheduleManager",
-                "Scheduled work for ${schedule.contactName} at ${schedule.getFormattedTime()}"
+                "Scheduled work for ${schedule.contactName} at ${java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date(scheduledTime))} (Reschedule: $isRescheduleForNextInterval)"
         )
     }
 
@@ -80,9 +98,8 @@ class SmsScheduleManager(private val context: Context) {
         val originalDayOfMonth = anchor.get(Calendar.DAY_OF_MONTH)
 
         // Iterate until we find the NEXT valid occurrence after 'now'
-        // ONLY if the schedule is recurring. If it's one-time, we stick to the original anchor.
-        if (schedule.isRecurring) {
-            while (anchor.timeInMillis <= now.timeInMillis) {
+        while (anchor.timeInMillis <= now.timeInMillis) {
+            if (schedule.isRecurring) {
                 when (schedule.frequency) {
                     SmsSchedule.FREQUENCY_HOURLY -> {
                         anchor.add(Calendar.HOUR_OF_DAY, 1)
@@ -113,6 +130,10 @@ class SmsScheduleManager(private val context: Context) {
                     }
                     else -> anchor.add(Calendar.DAY_OF_YEAR, 1) // Default to Daily
                 }
+            } else {
+                // Non-recurring: Treat as "Next Occurrence of this Time" (Daily behavior)
+                // If the time has passed today, we move to tomorrow.
+                anchor.add(Calendar.DAY_OF_YEAR, 1)
             }
         }
 
