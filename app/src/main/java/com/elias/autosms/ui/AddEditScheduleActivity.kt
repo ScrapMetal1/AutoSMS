@@ -369,8 +369,11 @@ class AddEditScheduleActivity : AppCompatActivity() {
         }
 
         val constraintsBuilder =
-                CalendarConstraints.Builder()
-                        .setValidator(DateValidatorPointForward.from(todayUtcMillis))
+                com.google.android.material.datepicker.CalendarConstraints.Builder()
+                        .setValidator(
+                                com.google.android.material.datepicker.DateValidatorPointForward
+                                        .from(todayUtcMillis)
+                        )
 
         val picker =
                 MaterialDatePicker.Builder.datePicker()
@@ -379,27 +382,30 @@ class AddEditScheduleActivity : AppCompatActivity() {
                         .setCalendarConstraints(constraintsBuilder.build())
                         .build()
 
-        picker.addOnPositiveButtonClickListener { selection ->
+        picker.addOnPositiveButtonClickListener { pickedSelection ->
             // MaterialDatePicker returns UTC MS. We need to respect that but display/store
             // meaningfully.
             // However, our App logic relies on Local Calendar for "Days", "Hours".
             // We'll interpret the selection as: "The user picked this calendar day".
 
             // 1. Convert UTC selection to Calendar components
-            val utcCalendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
-            utcCalendar.timeInMillis = selection
+            val pickedUtcCalendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
+            pickedUtcCalendar.timeInMillis = pickedSelection
 
             // 2. Create Local Calendar with those components
-            val localCalendar = Calendar.getInstance()
-            localCalendar.set(Calendar.YEAR, utcCalendar.get(Calendar.YEAR))
-            localCalendar.set(Calendar.MONTH, utcCalendar.get(Calendar.MONTH))
-            localCalendar.set(Calendar.DAY_OF_MONTH, utcCalendar.get(Calendar.DAY_OF_MONTH))
-            localCalendar.set(Calendar.HOUR_OF_DAY, 0)
-            localCalendar.set(Calendar.MINUTE, 0)
-            localCalendar.set(Calendar.SECOND, 0)
-            localCalendar.set(Calendar.MILLISECOND, 0)
+            val pickedLocalCalendar = Calendar.getInstance()
+            pickedLocalCalendar.set(Calendar.YEAR, pickedUtcCalendar.get(Calendar.YEAR))
+            pickedLocalCalendar.set(Calendar.MONTH, pickedUtcCalendar.get(Calendar.MONTH))
+            pickedLocalCalendar.set(
+                    Calendar.DAY_OF_MONTH,
+                    pickedUtcCalendar.get(Calendar.DAY_OF_MONTH)
+            )
+            pickedLocalCalendar.set(Calendar.HOUR_OF_DAY, 0)
+            pickedLocalCalendar.set(Calendar.MINUTE, 0)
+            pickedLocalCalendar.set(Calendar.SECOND, 0)
+            pickedLocalCalendar.set(Calendar.MILLISECOND, 0)
 
-            selectedDateMillis = localCalendar.timeInMillis
+            selectedDateMillis = pickedLocalCalendar.timeInMillis
             updateDateDisplay()
         }
 
