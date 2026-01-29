@@ -341,10 +341,42 @@ class AddEditScheduleActivity : AppCompatActivity() {
     }
 
     private fun showDatePicker() {
+        // Convert to UTC for the picker display so it doesn't show "Yesterday"
+        val localCalendar = Calendar.getInstance()
+        localCalendar.timeInMillis = selectedDateMillis
+
+        // Calculate "Today" in UTC components to match Local Today
+        // This ensures that if it's Jan 29 Local, we block Jan 28, even if it's still Jan 28 UTC.
+        val todayLocal = Calendar.getInstance()
+        val todayUtc = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
+        todayUtc.clear()
+        todayUtc.set(Calendar.YEAR, todayLocal.get(Calendar.YEAR))
+        todayUtc.set(Calendar.MONTH, todayLocal.get(Calendar.MONTH))
+        todayUtc.set(Calendar.DAY_OF_MONTH, todayLocal.get(Calendar.DAY_OF_MONTH))
+        val todayUtcMillis = todayUtc.timeInMillis
+
+        val utcCalendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
+        utcCalendar.clear()
+        utcCalendar.set(Calendar.YEAR, localCalendar.get(Calendar.YEAR))
+        utcCalendar.set(Calendar.MONTH, localCalendar.get(Calendar.MONTH))
+        utcCalendar.set(Calendar.DAY_OF_MONTH, localCalendar.get(Calendar.DAY_OF_MONTH))
+
+        // If currently selected date is in the past (e.g. editing an old schedule),
+        // default the picker selection to Today.
+        var selection = utcCalendar.timeInMillis
+        if (selection < todayUtcMillis) {
+            selection = todayUtcMillis
+        }
+
+        val constraintsBuilder =
+                CalendarConstraints.Builder()
+                        .setValidator(DateValidatorPointForward.from(todayUtcMillis))
+
         val picker =
                 MaterialDatePicker.Builder.datePicker()
                         .setTitleText("Select start date")
-                        .setSelection(selectedDateMillis)
+                        .setSelection(selection)
+                        .setCalendarConstraints(constraintsBuilder.build())
                         .build()
 
         picker.addOnPositiveButtonClickListener { selection ->
