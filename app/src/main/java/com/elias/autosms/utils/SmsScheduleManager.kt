@@ -84,18 +84,77 @@ class SmsScheduleManager(private val context: Context) {
     fun calculateInitialDelay(schedule: SmsSchedule): Long {
         val now = Calendar.getInstance()
 
-        // We use the original creation date (and configured time) as the anchor
-        // to prevent schedule drift (e.g. keeping "Mondays" as Mondays, or "XX:00" as "XX:00").
+        // We use the startDate (user selected date) and configured time as the anchor
+        // to prevent schedule drift and support future scheduling.
         val anchor = Calendar.getInstance()
-        anchor.timeInMillis = schedule.createdAt
+        // Use startDate for the date part
+        val paramsCal = Calendar.getInstance()
+        paramsCal.timeInMillis = schedule.startDate
+
+        anchor.set(Calendar.YEAR, paramsCal.get(Calendar.YEAR))
+        anchor.set(Calendar.MONTH, paramsCal.get(Calendar.MONTH))
+        anchor.set(Calendar.DAY_OF_MONTH, paramsCal.get(Calendar.DAY_OF_MONTH))
+
+        // Use hour/minute from schedule
         anchor.set(Calendar.HOUR_OF_DAY, schedule.hour)
         anchor.set(Calendar.MINUTE, schedule.minute)
         anchor.set(Calendar.SECOND, 0)
         anchor.set(Calendar.MILLISECOND, 0)
 
         // Capture the original day of month for monthly calculations to prevent drift
-        // (e.g. Jan 31 -> Feb 28 -> Mar 28 avoidance)
         val originalDayOfMonth = anchor.get(Calendar.DAY_OF_MONTH)
+
+        // Optimization: Fast-forward 'anchor' if it is far in the past
+        if (anchor.timeInMillis < now.timeInMillis) {
+            val diffMillis = now.timeInMillis - anchor.timeInMillis
+
+            // Heuristic jumps based on frequency to get close to 'now'
+            // We under-shoot slightly to let the exact loop handle the final precision and edge
+            // cases (DST, month lengths)
+            if (schedule.isRecurring) {
+                when (schedule.frequency) {
+                    SmsSchedule.FREQUENCY_HOURLY -> {
+                        val hours = diffMillis / 3600000L
+                        if (hours > 1) anchor.add(Calendar.HOUR_OF_DAY, (hours - 1).toInt())
+                    }
+                    SmsSchedule.FREQUENCY_DAILY -> {
+                        val days = diffMillis / 86400000L
+                        if (days > 1) anchor.add(Calendar.DAY_OF_YEAR, (days - 1).toInt())
+                    }
+                    SmsSchedule.FREQUENCY_WEEKLY -> {
+                        val weeks = diffMillis / (86400000L * 7)
+                        if (weeks > 1) anchor.add(Calendar.WEEK_OF_YEAR, (weeks - 1).toInt())
+                    }
+                    SmsSchedule.FREQUENCY_MONTHLY -> {
+                        // Month calculations are tricky with lengths, we estimate 28 days to be
+                        // safe
+                        val approxMonths = diffMillis / (86400000L * 28)
+                        if (approxMonths > 1) {
+                            anchor.add(Calendar.MONTH, (approxMonths - 1).toInt())
+                            // Re-apply day-of-month fix after jump
+                            val maxDay = anchor.getActualMaximum(Calendar.DAY_OF_MONTH)
+                            val targetDay =
+                                    if (originalDayOfMonth > maxDay) maxDay else originalDayOfMonth
+                            anchor.set(Calendar.DAY_OF_MONTH, targetDay)
+                        }
+                    }
+                    SmsSchedule.FREQUENCY_CUSTOM -> {
+                        val p = if (schedule.period < 1) 1 else schedule.period
+                        if (schedule.periodUnit == SmsSchedule.UNIT_HOURS) {
+                            val periodMs = p * 3600000L
+                            val cycles = diffMillis / periodMs
+                            if (cycles > 1)
+                                    anchor.add(Calendar.HOUR_OF_DAY, ((cycles - 1) * p).toInt())
+                        } else {
+                            val periodMs = p * 86400000L
+                            val cycles = diffMillis / periodMs
+                            if (cycles > 1)
+                                    anchor.add(Calendar.DAY_OF_YEAR, ((cycles - 1) * p).toInt())
+                        }
+                    }
+                }
+            }
+        }
 
         // Iterate until we find the NEXT valid occurrence after 'now'
         while (anchor.timeInMillis <= now.timeInMillis) {

@@ -68,10 +68,10 @@ class SmsWorker(context: Context, params: WorkerParameters) : CoroutineWorker(co
             Result.success()
         } catch (e: SecurityException) {
             Log.e("SmsWorker", "SMS permission denied", e)
-            Result.failure()
+            Result.failure() // Permissions won't self-fix, so we fail permanently
         } catch (e: Exception) {
-            Log.e("SmsWorker", "Error sending SMS", e)
-            Result.failure()
+            Log.e("SmsWorker", "Error sending SMS, will retry", e)
+            Result.retry() // Transient error (network, etc), so we retry
         } finally {
             // Re-fetch the schedule from DB to get the LATEST state
             // This prevents race conditions where the user changed isRecurring between

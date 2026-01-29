@@ -19,6 +19,7 @@ data class SmsSchedule(
         val periodUnit: String = UNIT_DAYS,
         val isEnabled: Boolean = true,
         val isRecurring: Boolean = false,
+        val startDate: Long = System.currentTimeMillis(),
         val createdAt: Long = System.currentTimeMillis()
 ) : Parcelable {
 

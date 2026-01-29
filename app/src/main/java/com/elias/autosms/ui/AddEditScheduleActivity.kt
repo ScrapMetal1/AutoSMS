@@ -19,8 +19,10 @@ import com.elias.autosms.data.SmsSchedule
 import com.elias.autosms.databinding.ActivityAddEditScheduleBinding
 import com.elias.autosms.viewmodel.AddEditScheduleViewModel
 import com.elias.autosms.viewmodel.AddEditScheduleViewModelFactory
+import com.google.android.material.datepicker.MaterialDatePicker
 import com.google.android.material.timepicker.MaterialTimePicker
 import com.google.android.material.timepicker.TimeFormat
+import java.text.SimpleDateFormat
 import java.util.*
 
 class AddEditScheduleActivity : AppCompatActivity() {
@@ -41,6 +43,7 @@ class AddEditScheduleActivity : AppCompatActivity() {
     private var scheduleId: Long = 0
     private var isContactMode = true
     private var originalCreatedAt: Long = System.currentTimeMillis()
+    private var selectedDateMillis: Long = MaterialDatePicker.todayInUtcMilliseconds()
 
     // handle result from contact picker
     private val contactPickerLauncher =
@@ -78,7 +81,17 @@ class AddEditScheduleActivity : AppCompatActivity() {
         val now = Calendar.getInstance()
         selectedHour = now.get(Calendar.HOUR_OF_DAY)
         selectedMinute = now.get(Calendar.MINUTE)
+
+        // Initialize date to today's local date
+        val today = Calendar.getInstance()
+        today.set(Calendar.HOUR_OF_DAY, 0)
+        today.set(Calendar.MINUTE, 0)
+        today.set(Calendar.SECOND, 0)
+        today.set(Calendar.MILLISECOND, 0)
+        selectedDateMillis = today.timeInMillis
+
         updateTimeDisplay()
+        updateDateDisplay()
 
         // handle contact vs phone number mode toggle
         binding.toggleGroupContactType.addOnButtonCheckedListener { _, checkedId, isChecked ->
@@ -103,6 +116,7 @@ class AddEditScheduleActivity : AppCompatActivity() {
 
         binding.buttonSelectContact.setOnClickListener { openContactPicker() }
         binding.buttonSelectTime.setOnClickListener { showTimePicker() }
+        binding.buttonSelectDate.setOnClickListener { showDatePicker() }
         binding.buttonSave.setOnClickListener { saveSchedule() }
         binding.buttonCancel.setOnClickListener { finish() }
 
@@ -208,6 +222,7 @@ class AddEditScheduleActivity : AppCompatActivity() {
             isEditMode = true
             scheduleId = schedule.id
             originalCreatedAt = schedule.createdAt
+            selectedDateMillis = schedule.startDate // Load saved start date
             title = "Edit AutoSMS Schedule"
 
             selectedContact = Pair(schedule.contactName, schedule.phoneNumber)
@@ -230,6 +245,7 @@ class AddEditScheduleActivity : AppCompatActivity() {
             selectedHour = schedule.hour
             selectedMinute = schedule.minute
             updateTimeDisplay()
+            updateDateDisplay()
 
             // --- fill in frequency, unit, and recurring state ---
             binding.switchRecurring.isChecked = schedule.isRecurring
@@ -324,6 +340,45 @@ class AddEditScheduleActivity : AppCompatActivity() {
         binding.textSelectedTime.text = "$hourStr:$minuteStr $amPm"
     }
 
+    private fun showDatePicker() {
+        val picker =
+                MaterialDatePicker.Builder.datePicker()
+                        .setTitleText("Select start date")
+                        .setSelection(selectedDateMillis)
+                        .build()
+
+        picker.addOnPositiveButtonClickListener { selection ->
+            // MaterialDatePicker returns UTC MS. We need to respect that but display/store
+            // meaningfully.
+            // However, our App logic relies on Local Calendar for "Days", "Hours".
+            // We'll interpret the selection as: "The user picked this calendar day".
+
+            // 1. Convert UTC selection to Calendar components
+            val utcCalendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
+            utcCalendar.timeInMillis = selection
+
+            // 2. Create Local Calendar with those components
+            val localCalendar = Calendar.getInstance()
+            localCalendar.set(Calendar.YEAR, utcCalendar.get(Calendar.YEAR))
+            localCalendar.set(Calendar.MONTH, utcCalendar.get(Calendar.MONTH))
+            localCalendar.set(Calendar.DAY_OF_MONTH, utcCalendar.get(Calendar.DAY_OF_MONTH))
+            localCalendar.set(Calendar.HOUR_OF_DAY, 0)
+            localCalendar.set(Calendar.MINUTE, 0)
+            localCalendar.set(Calendar.SECOND, 0)
+            localCalendar.set(Calendar.MILLISECOND, 0)
+
+            selectedDateMillis = localCalendar.timeInMillis
+            updateDateDisplay()
+        }
+
+        picker.show(supportFragmentManager, "DATE_PICKER")
+    }
+
+    private fun updateDateDisplay() {
+        val format = SimpleDateFormat("EEE, MMM d, yyyy", Locale.getDefault())
+        binding.textSelectedDate.text = format.format(Date(selectedDateMillis))
+    }
+
     private fun updateRecurrenceWarning() {
         val isRecurring = binding.switchRecurring.isChecked
         val frequency = binding.autoCompleteFrequency.text.toString()
@@ -416,6 +471,7 @@ class AddEditScheduleActivity : AppCompatActivity() {
                         periodUnit = periodUnit,
                         isRecurring = isRecurring,
                         isEnabled = true,
+                        startDate = selectedDateMillis,
                         createdAt = originalCreatedAt
                 )
 
