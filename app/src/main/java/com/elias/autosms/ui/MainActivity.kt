@@ -31,7 +31,7 @@ class MainActivity : AppCompatActivity() {
                 val allGranted = permissions.all { it.value }
                 if (allGranted) {
                     Toast.makeText(this, "Permissions granted", Toast.LENGTH_SHORT).show()
-                    checkAlarmPermission()
+                    checkSpecialPermissions()
                 } else {
                     showPermissionDeniedDialog()
                 }
@@ -121,7 +121,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // Check required permissions (SMS and Contacts)
+    // Check required permissions (SMS)
     private fun checkPermissions() {
         val permissions = mutableListOf<String>()
 
@@ -131,17 +131,17 @@ class MainActivity : AppCompatActivity() {
             permissions.add(Manifest.permission.SEND_SMS)
         }
 
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) !=
-                        PackageManager.PERMISSION_GRANTED
-        ) {
-            permissions.add(Manifest.permission.READ_CONTACTS)
-        }
-
         if (permissions.isNotEmpty()) {
             requestPermissionLauncher.launch(permissions.toTypedArray())
         } else {
-            checkAlarmPermission()
+            // Permissions granted, check for special permissions
+            checkSpecialPermissions()
         }
+    }
+
+    private fun checkSpecialPermissions() {
+        checkAlarmPermission()
+        checkBatteryOptimization()
     }
 
     // Check SCHEDULE_EXACT_ALARM permission for Android 12+
@@ -156,12 +156,34 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun checkBatteryOptimization() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val powerManager = getSystemService(POWER_SERVICE) as android.os.PowerManager
+            if (!powerManager.isIgnoringBatteryOptimizations(packageName)) {
+                showBatteryOptimizationDialog()
+            }
+        }
+    }
+
+    private fun showBatteryOptimizationDialog() {
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                .setTitle("Battery Optimization")
+                .setMessage(
+                        "To ensure your scheduled messages are sent exactly on time, AutoSMS needs to operate without background restrictions.\n\nPlease select 'No restrictions' or 'Unrestricted' in the following settings screen."
+                )
+                .setPositiveButton("Open Settings") { _, _ ->
+                    val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+                    intent.data = Uri.fromParts("package", packageName, null)
+                    startActivity(intent)
+                }
+                .setNegativeButton("Later", null)
+                .show()
+    }
+
     // Verify if all required permissions are granted
     private fun hasRequiredPermissions(): Boolean {
         return ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS) ==
-                PackageManager.PERMISSION_GRANTED &&
-                ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) ==
-                        PackageManager.PERMISSION_GRANTED
+                PackageManager.PERMISSION_GRANTED
     }
 
     // Show dialog if permissions are denied
@@ -169,7 +191,7 @@ class MainActivity : AppCompatActivity() {
         AlertDialog.Builder(this)
                 .setTitle("Permissions Required")
                 .setMessage(
-                        "AutoSMS requires SMS and Contacts permissions to function properly. Please grant these permissions in Settings."
+                        "AutoSMS requires SMS permission to function properly. Please grant this permission in Settings."
                 )
                 .setPositiveButton("Settings") { _, _ ->
                     val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
