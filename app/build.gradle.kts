@@ -7,14 +7,14 @@ plugins {
 
 android {
     namespace = "com.elias.autosms"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.elias.autosms"
         minSdk = 21
-        targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        targetSdk = 35
+        versionCode = 2
+        versionName = "1.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         
