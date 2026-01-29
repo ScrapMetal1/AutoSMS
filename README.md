@@ -19,7 +19,7 @@ AutoSMS is a lightweight, reliable Android application that allows users to sche
 
 ## Installation (APK)
 
-1. **Download**: Get the latest APK from the [Releases](#) page (if available) or build it yourself.
+1. **Download**: Get the latest APK from the [Releases](https://github.com/ScrapMetal1/AutoSMS/releases) page or build it yourself.
 2. **Install**: Open the APK file on your Android device. You may need to enable "Install unknown apps" in your settings.
 3. **Permissions**: improved reliability, the app requires the following permissions:
    - **Main Permissions**: Send SMS, Read Contacts.
