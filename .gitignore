@@ -13,3 +13,9 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Exclude build outputs
+**/build/
+/app/release/
+/release/
+keystore/
