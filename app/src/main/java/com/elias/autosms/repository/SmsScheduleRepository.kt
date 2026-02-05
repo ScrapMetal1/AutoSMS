@@ -30,7 +30,7 @@ class SmsScheduleRepository(private val context: Context) {
         return withContext(Dispatchers.IO) { smsScheduleDao.getScheduleById(id) }
     }
 
-    // Insert a new schedule and schedule its work if enabled
+    // insert uses default allowCatchUp = false (strict start time)
     suspend fun insert(schedule: SmsSchedule): Long {
         return withContext(Dispatchers.IO) {
             val id = smsScheduleDao.insert(schedule)
@@ -48,7 +48,8 @@ class SmsScheduleRepository(private val context: Context) {
             smsScheduleDao.update(schedule)
             smsScheduleManager.cancelWork(schedule.id)
             if (schedule.isEnabled) {
-                smsScheduleManager.scheduleRepeatingWork(schedule)
+                // Update: Allow CatchUp so we don't pause for the day just because of an edit
+                smsScheduleManager.scheduleRepeatingWork(schedule, allowCatchUp = true)
             }
         }
     }
@@ -68,7 +69,8 @@ class SmsScheduleRepository(private val context: Context) {
             smsScheduleManager.cancelWork(id)
             if (enabled) {
                 getScheduleById(id)?.let { schedule ->
-                    smsScheduleManager.scheduleRepeatingWork(schedule)
+                    // Toggle On: Allow CatchUp so it starts ASAP
+                    smsScheduleManager.scheduleRepeatingWork(schedule, allowCatchUp = true)
                 }
             }
         }
@@ -79,7 +81,8 @@ class SmsScheduleRepository(private val context: Context) {
         withContext(Dispatchers.IO) {
             val enabledSchedules = getEnabledSchedules()
             enabledSchedules.forEach { schedule ->
-                smsScheduleManager.scheduleRepeatingWork(schedule)
+                // Reboot: Must Allow CatchUp to resume schedules correctly
+                smsScheduleManager.scheduleRepeatingWork(schedule, allowCatchUp = true)
             }
         }
     }

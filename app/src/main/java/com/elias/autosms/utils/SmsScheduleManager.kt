@@ -13,12 +13,17 @@ class SmsScheduleManager(private val context: Context) {
     private val workManager = WorkManager.getInstance(context)
 
     // Schedules a daily recurring SMS work request
-    fun scheduleRepeatingWork(schedule: SmsSchedule, isRescheduleForNextInterval: Boolean = false) {
+    fun scheduleRepeatingWork(
+            schedule: SmsSchedule,
+            isRescheduleForNextInterval: Boolean = false,
+            allowCatchUp: Boolean = false
+    ) {
         val workName = "sms_work_${schedule.id}"
 
         // Calculate initial delay until next occurrence
         val initialDelay =
                 if (!isRescheduleForNextInterval &&
+                                !allowCatchUp &&
                                 (schedule.frequency == SmsSchedule.FREQUENCY_HOURLY ||
                                         (schedule.frequency == SmsSchedule.FREQUENCY_CUSTOM &&
                                                 schedule.periodUnit == SmsSchedule.UNIT_HOURS))
@@ -30,7 +35,13 @@ class SmsScheduleManager(private val context: Context) {
                     // if we missed the start. We want to wait for the next "clean" Daily start
                     // time.
                     // We temporarily treat it as DAILY to find the anchor point.
-                    calculateInitialDelay(schedule.copy(frequency = SmsSchedule.FREQUENCY_DAILY))
+                    try {
+                        calculateInitialDelay(
+                                schedule.copy(frequency = SmsSchedule.FREQUENCY_DAILY)
+                        )
+                    } catch (e: Exception) {
+                        calculateInitialDelay(schedule)
+                    }
                 } else {
                     // Standard Logic: Worker logic (continue sequence) or Low-Frequency
                     // (Daily/Weekly)
