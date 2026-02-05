@@ -41,4 +41,12 @@
         <item>Days</item>
         <item>Hours</item>
     </string-array>
+    <!-- Sort Options -->
+    <string name="sort_by">Sort By</string>
+    <string name="sort_recently_created">Recently Created</string>
+    <string name="sort_time">Scheduled Time</string>
+    <string name="sort_start_date">Start Date</string>
+    <string name="sort_enabled">Enabled Status</string>
+    <string name="sort_ascending">Ascending</string>
+    <string name="sort_descending">Descending</string>
 </resources>

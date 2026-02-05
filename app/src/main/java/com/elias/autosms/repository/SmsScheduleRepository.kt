@@ -8,11 +8,12 @@ import com.elias.autosms.utils.SmsScheduleManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-class SmsScheduleRepository(context: Context) {
+class SmsScheduleRepository(private val context: Context) {
 
-    private val database = SmsScheduleDatabase.getDatabase(context)
-    private val smsScheduleDao = database.smsScheduleDao()
-    private val smsScheduleManager = SmsScheduleManager(context)
+    // lazy initialization to avoid blocking main thread during startup
+    private val database by lazy { SmsScheduleDatabase.getDatabase(context) }
+    private val smsScheduleDao by lazy { database.smsScheduleDao() }
+    private val smsScheduleManager by lazy { SmsScheduleManager(context) }
 
     // Retrieve all SMS schedules for display in the UI
     fun getAllSchedules(): LiveData<List<SmsSchedule>> {

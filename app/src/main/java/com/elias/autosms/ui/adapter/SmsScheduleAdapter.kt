@@ -1,6 +1,7 @@
 package com.elias.autosms.ui.adapter
-import android.view.View
+
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
@@ -9,9 +10,9 @@ import com.elias.autosms.data.SmsSchedule
 import com.elias.autosms.databinding.ItemSmsScheduleBinding
 
 class SmsScheduleAdapter(
-    private val onToggleClick: (SmsSchedule) -> Unit,
-    private val onEditClick: (SmsSchedule) -> Unit,
-    private val onDeleteClick: (SmsSchedule) -> Unit
+        private val onToggleClick: (SmsSchedule) -> Unit,
+        private val onEditClick: (SmsSchedule) -> Unit,
+        private val onDeleteClick: (SmsSchedule) -> Unit
 ) : ListAdapter<SmsSchedule, SmsScheduleAdapter.SmsScheduleViewHolder>(DiffCallback) {
 
     object DiffCallback : DiffUtil.ItemCallback<SmsSchedule>() {
@@ -25,20 +26,20 @@ class SmsScheduleAdapter(
     }
 
     class SmsScheduleViewHolder(private val binding: ItemSmsScheduleBinding) :
-        RecyclerView.ViewHolder(binding.root) {
+            RecyclerView.ViewHolder(binding.root) {
 
         fun bind(
-            schedule: SmsSchedule,
-            onToggleClick: (SmsSchedule) -> Unit,
-            onEditClick: (SmsSchedule) -> Unit,
-            onDeleteClick: (SmsSchedule) -> Unit
+                schedule: SmsSchedule,
+                onToggleClick: (SmsSchedule) -> Unit,
+                onEditClick: (SmsSchedule) -> Unit,
+                onDeleteClick: (SmsSchedule) -> Unit
         ) {
             binding.apply {
                 textContactName.text = schedule.contactName
                 textPhoneNumber.text = schedule.phoneNumber
                 textMessage.text = schedule.message
                 textTime.text = schedule.getFormattedTime()
-                
+
                 // Remove previous listener to prevent memory leaks
                 switchEnabled.setOnCheckedChangeListener(null)
                 switchEnabled.isChecked = schedule.isEnabled
@@ -51,30 +52,27 @@ class SmsScheduleAdapter(
                 textTime.alpha = alpha
 
                 // Set listeners after setting the checked state to prevent unwanted callbacks
-                switchEnabled.setOnCheckedChangeListener { _, _ ->
-                    onToggleClick(schedule)
-                }
+                switchEnabled.setOnCheckedChangeListener { _, _ -> onToggleClick(schedule) }
 
-                buttonEdit.setOnClickListener {
-                    onEditClick(schedule)
-                }
+                buttonEdit.setOnClickListener { onEditClick(schedule) }
 
-                buttonDelete.setOnClickListener {
-                    onDeleteClick(schedule)
-                }
+                buttonDelete.setOnClickListener { onDeleteClick(schedule) }
 
                 // Recurring Info Logic
+                layoutRecurringInfo.visibility = android.view.View.VISIBLE
+
                 if (schedule.isRecurring) {
-                    layoutRecurringInfo.visibility = android.view.View.VISIBLE
-                    
-                    val frequencyText = if (schedule.frequency == SmsSchedule.FREQUENCY_CUSTOM) {
-                        "Every ${schedule.period} ${schedule.periodUnit}"
-                    } else {
-                        schedule.frequency
-                    }
+                    iconRecurring.visibility = android.view.View.VISIBLE
+                    val frequencyText =
+                            if (schedule.frequency == SmsSchedule.FREQUENCY_CUSTOM) {
+                                "Every ${schedule.period} ${schedule.periodUnit}"
+                            } else {
+                                schedule.frequency
+                            }
                     textFrequency.text = frequencyText
                 } else {
-                    layoutRecurringInfo.visibility = android.view.View.GONE
+                    iconRecurring.visibility = android.view.View.GONE
+                    textFrequency.text = "One Time"
                 }
             }
         }
@@ -88,11 +86,8 @@ class SmsScheduleAdapter(
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): SmsScheduleViewHolder {
-        val binding = ItemSmsScheduleBinding.inflate(
-            LayoutInflater.from(parent.context),
-            parent,
-            false
-        )
+        val binding =
+                ItemSmsScheduleBinding.inflate(LayoutInflater.from(parent.context), parent, false)
         return SmsScheduleViewHolder(binding)
     }
 

@@ -69,7 +69,7 @@
             android:layout_marginTop="8dp"
             android:textSize="14sp"
             android:textColor="?android:attr/textColorSecondary"
-            android:maxLines="2"
+            android:maxLines="3"
             android:ellipsize="end"
             tools:text="This is a sample SMS message that will be sent daily at the scheduled time." />
 
@@ -85,6 +85,7 @@
             tools:visibility="visible">
 
             <ImageView
+                android:id="@+id/iconRecurring"
                 android:layout_width="16dp"
                 android:layout_height="16dp"
                 android:src="@drawable/ic_repeat"

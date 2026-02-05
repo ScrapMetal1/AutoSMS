@@ -7,6 +7,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.widget.RadioGroup
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
@@ -15,16 +16,20 @@ import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.elias.autosms.R
 import com.elias.autosms.databinding.ActivityMainBinding
 import com.elias.autosms.ui.adapter.SmsScheduleAdapter
 import com.elias.autosms.viewmodel.MainViewModel
 import com.elias.autosms.viewmodel.MainViewModelFactory
+import com.google.android.material.bottomsheet.BottomSheetDialog
+import com.google.android.material.button.MaterialButtonToggleGroup
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private lateinit var viewModel: MainViewModel
     private lateinit var adapter: SmsScheduleAdapter
+    private var isReady = false
 
     private val requestPermissionLauncher =
             registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
@@ -39,8 +44,25 @@ class MainActivity : AppCompatActivity() {
             }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        installSplashScreen()
+        val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
+
+        // Add smooth exit animation
+        splashScreen.setOnExitAnimationListener { splashScreenView ->
+            splashScreenView
+                    .view
+                    .animate()
+                    .alpha(0f)
+                    .setDuration(300)
+                    .setListener(
+                            object : android.animation.AnimatorListenerAdapter() {
+                                override fun onAnimationEnd(animation: android.animation.Animator) {
+                                    splashScreenView.remove()
+                                }
+                            }
+                    )
+        }
+
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
@@ -48,6 +70,7 @@ class MainActivity : AppCompatActivity() {
         setupViewModel()
         setupRecyclerView()
         setupFab()
+        setupSortButton() // Call the new setupSortButton
         checkPermissions()
         observeSchedules()
     }
@@ -120,6 +143,59 @@ class MainActivity : AppCompatActivity() {
                     } else {
                         android.view.View.GONE
                     }
+            // signal that data is ready so splash screen can dismiss
+            isReady = true
+        }
+    }
+
+    private fun setupSortButton() {
+        binding.btnSort.setOnClickListener {
+            val dialog = BottomSheetDialog(this)
+            val sheetView = layoutInflater.inflate(R.layout.dialog_sort_options, null)
+            dialog.setContentView(sheetView)
+
+            val toggleOrder = sheetView.findViewById<MaterialButtonToggleGroup>(R.id.toggleOrder)
+            val radioGroup = sheetView.findViewById<RadioGroup>(R.id.radioGroupCriteria)
+
+            // Set initial state
+            val currentDir = viewModel.getSortDirection()
+            toggleOrder.check(
+                    if (currentDir == MainViewModel.SortDirection.ASC) R.id.btnAsc else R.id.btnDesc
+            )
+
+            val currentField = viewModel.getSortField()
+            val radioId =
+                    when (currentField) {
+                        MainViewModel.SortField.CREATED -> R.id.radioCreated
+                        MainViewModel.SortField.TIME -> R.id.radioTime
+                        MainViewModel.SortField.START_DATE -> R.id.radioDate
+                        MainViewModel.SortField.ENABLED -> R.id.radioEnabled
+                    }
+            radioGroup.check(radioId)
+
+            // Listeners
+            toggleOrder.addOnButtonCheckedListener { _, checkedId, isChecked ->
+                if (isChecked) {
+                    val newDir =
+                            if (checkedId == R.id.btnAsc) MainViewModel.SortDirection.ASC
+                            else MainViewModel.SortDirection.DESC
+                    viewModel.setSortOption(viewModel.getSortField(), newDir)
+                }
+            }
+
+            radioGroup.setOnCheckedChangeListener { _, checkedId ->
+                val newField =
+                        when (checkedId) {
+                            R.id.radioCreated -> MainViewModel.SortField.CREATED
+                            R.id.radioTime -> MainViewModel.SortField.TIME
+                            R.id.radioDate -> MainViewModel.SortField.START_DATE
+                            R.id.radioEnabled -> MainViewModel.SortField.ENABLED
+                            else -> MainViewModel.SortField.CREATED
+                        }
+                viewModel.setSortOption(newField, viewModel.getSortDirection())
+            }
+
+            dialog.show()
         }
     }
 

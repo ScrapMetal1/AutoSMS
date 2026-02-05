@@ -16,21 +16,50 @@
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
             android:background="?attr/colorPrimary"
-            app:popupTheme="@style/Theme.AutoSMS.PopupOverlay" />
+            app:popupTheme="@style/Theme.AutoSMS.PopupOverlay"
+            app:layout_scrollFlags="scroll|enterAlways" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="end"
+            android:background="?android:attr/windowBackground"
+            android:theme="@style/Theme.AutoSMS"
+            android:paddingEnd="16dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="0dp"
+            app:layout_scrollFlags="scroll|enterAlways">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSort"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:minHeight="0dp"
+                android:text="@string/sort_by"
+                android:textSize="12sp"
+                app:icon="@android:drawable/ic_menu_sort_by_size"
+                app:iconSize="16dp"
+                app:strokeColor="?attr/colorPrimary"
+                app:strokeWidth="1dp"
+                app:cornerRadius="16dp" />
+        </LinearLayout>
 
     </com.google.android.material.appbar.AppBarLayout>
 
-    <LinearLayout
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="vertical"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/recyclerView"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:padding="8dp"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:paddingBottom="8dp"
+            android:paddingTop="0dp"
             tools:listitem="@layout/item_sms_schedule" />
 
         <TextView
@@ -44,7 +73,7 @@
             android:textColor="?android:attr/textColorSecondary"
             android:visibility="gone" />
 
-    </LinearLayout>
+    </FrameLayout>
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fabAdd"
