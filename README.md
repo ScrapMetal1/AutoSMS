@@ -2,6 +2,10 @@
 
 AutoSMS is a lightweight, reliable Android application that allows users to schedule automated text messages. Whether you need to send birthday wishes, daily reminders, or periodic updates, AutoSMS handles it for you efficiently.
 
+## 🚀 Join the Closed Beta
+We are currently running a **Closed Testing** phase and would love your feedback to make AutoSMS better.
+👉 **Join the program here:** [https://eliascorp.org/autosms/](https://eliascorp.org/autosms/)
+
 ## Features
 
 - 📅 **Schedule SMS**: Plan your messages in advance.
@@ -70,3 +74,4 @@ To build this project locally, you will need:
 
 Copyright © 2025 Josh Zachariah. All rights reserved.
 Unauthorized copying or distribution of this software is strictly prohibited.
+This README is written by AI mostly. Because why not?
