@@ -36,7 +36,7 @@ class MainActivity : AppCompatActivity() {
                     permissions ->
                 val allGranted = permissions.all { it.value }
                 if (allGranted) {
-                    Toast.makeText(this, "Permissions granted", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, getString(R.string.permissions_granted), Toast.LENGTH_SHORT).show()
                     checkSpecialPermissions()
                 } else {
                     showPermissionDeniedDialog()
@@ -89,7 +89,7 @@ class MainActivity : AppCompatActivity() {
     // Setup toolbar with menu
     private fun setupToolbar() {
         setSupportActionBar(binding.toolbar)
-        supportActionBar?.title = "AutoSMS"
+        supportActionBar?.title = getString(R.string.app_name)
     }
 
     // Initialize ViewModel with factory
@@ -245,16 +245,14 @@ class MainActivity : AppCompatActivity() {
 
     private fun showBatteryOptimizationDialog() {
         com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
-                .setTitle("Battery Optimization")
-                .setMessage(
-                        "To ensure your scheduled messages are sent exactly on time, AutoSMS needs to operate without background restrictions.\n\nPlease select 'No restrictions' or 'Unrestricted' in the following settings screen."
-                )
-                .setPositiveButton("Open Settings") { _, _ ->
+                .setTitle(R.string.battery_optimization)
+                .setMessage(R.string.battery_optimization_message)
+                .setPositiveButton(R.string.open_settings) { _, _ ->
                     val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
                     intent.data = Uri.fromParts("package", packageName, null)
                     startActivity(intent)
                 }
-                .setNegativeButton("Later", null)
+                .setNegativeButton(R.string.later, null)
                 .show()
     }
 
@@ -267,29 +265,27 @@ class MainActivity : AppCompatActivity() {
     // Show dialog if permissions are denied
     private fun showPermissionDeniedDialog() {
         AlertDialog.Builder(this)
-                .setTitle("Permissions Required")
-                .setMessage(
-                        "AutoSMS requires SMS permission to function properly. Please grant this permission in Settings."
-                )
-                .setPositiveButton("Settings") { _, _ ->
+                .setTitle(R.string.permissions_required)
+                .setMessage(R.string.permissions_required_message)
+                .setPositiveButton(R.string.settings_button) { _, _ ->
                     val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
                     intent.data = Uri.fromParts("package", packageName, null)
                     startActivity(intent)
                 }
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(R.string.cancel_button, null)
                 .show()
     }
 
     // Show confirmation dialog before deleting a schedule
     private fun showDeleteConfirmation(scheduleId: Long, contactName: String) {
         AlertDialog.Builder(this)
-                .setTitle("Delete Schedule")
-                .setMessage("Are you sure you want to delete the SMS schedule for $contactName?")
-                .setPositiveButton("Delete") { _, _ ->
+                .setTitle(R.string.delete_schedule)
+                .setMessage(getString(R.string.delete_schedule_confirm, contactName))
+                .setPositiveButton(R.string.delete_button) { _, _ ->
                     viewModel.deleteSchedule(scheduleId)
-                    Toast.makeText(this, "Schedule deleted", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, getString(R.string.schedule_deleted), Toast.LENGTH_SHORT).show()
                 }
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(R.string.cancel_button, null)
                 .show()
     }
 }

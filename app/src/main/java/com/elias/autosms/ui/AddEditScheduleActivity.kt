@@ -19,6 +19,7 @@ import com.elias.autosms.data.SmsSchedule
 import com.elias.autosms.databinding.ActivityAddEditScheduleBinding
 import com.elias.autosms.viewmodel.AddEditScheduleViewModel
 import com.elias.autosms.viewmodel.AddEditScheduleViewModelFactory
+import com.elias.autosms.viewmodel.SaveResult
 import com.google.android.material.datepicker.MaterialDatePicker
 import com.google.android.material.timepicker.MaterialTimePicker
 import com.google.android.material.timepicker.TimeFormat
@@ -75,6 +76,25 @@ class AddEditScheduleActivity : AppCompatActivity() {
     private fun setupViewModel() {
         val factory = AddEditScheduleViewModelFactory(application)
         viewModel = ViewModelProvider(this, factory)[AddEditScheduleViewModel::class.java]
+
+        // only show success toast and finish when save actually succeeded; on error we stay here so they can retry.
+        viewModel.saveResult.observe(this) { result ->
+            result ?: return@observe
+            viewModel.clearSaveResult()
+            when (result) {
+                is SaveResult.Success -> {
+                    if (result.isEdit) {
+                        Toast.makeText(this, getString(R.string.schedule_updated), Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(this, getString(R.string.schedule_saved), Toast.LENGTH_SHORT).show()
+                    }
+                    finish()
+                }
+                is SaveResult.Error -> {
+                    Toast.makeText(this, getString(R.string.schedule_save_error), Toast.LENGTH_LONG).show()
+                }
+            }
+        }
     }
 
     private fun setupViews() {
@@ -223,7 +243,7 @@ class AddEditScheduleActivity : AppCompatActivity() {
             scheduleId = schedule.id
             originalCreatedAt = schedule.createdAt
             selectedDateMillis = schedule.startDate // Load saved start date
-            title = "Edit AutoSMS Schedule"
+            title = getString(R.string.title_edit_schedule)
 
             selectedContact = Pair(schedule.contactName, schedule.phoneNumber)
 
@@ -264,7 +284,7 @@ class AddEditScheduleActivity : AppCompatActivity() {
             }
             updateRecurrenceWarning()
         } else {
-            title = "Add AutoSMS Schedule"
+            title = getString(R.string.title_add_schedule)
         }
     }
 
@@ -273,22 +293,19 @@ class AddEditScheduleActivity : AppCompatActivity() {
         contactPickerLauncher.launch(intent)
     }
 
+    // using query()?.use { } so the cursor is closed once when the block exits; we used to close it again in finally, which could double-close.
     private fun handleContactSelection(uri: Uri) {
-        var cursor: Cursor? = null
-
         try {
-            cursor = contentResolver.query(uri, null, null, null, null)
-
-            cursor?.use {
-                if (it.moveToFirst()) {
+            contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) {
                     val nameIndex =
-                            it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
+                            cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
                     val numberIndex =
-                            it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
+                            cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
 
                     if (nameIndex != -1 && numberIndex != -1) {
-                        val contactName = it.getString(nameIndex)
-                        val phoneNumber = it.getString(numberIndex)
+                        val contactName = cursor.getString(nameIndex)
+                        val phoneNumber = cursor.getString(numberIndex)
 
                         selectedContact = Pair(contactName, phoneNumber)
 
@@ -296,7 +313,7 @@ class AddEditScheduleActivity : AppCompatActivity() {
                     } else {
                         Toast.makeText(
                                         this,
-                                        "Unable to retrieve contact details",
+                                        getString(R.string.error_contact_details),
                                         Toast.LENGTH_SHORT
                                 )
                                 .show()
@@ -304,10 +321,11 @@ class AddEditScheduleActivity : AppCompatActivity() {
                 }
             }
         } catch (e: Exception) {
-            Toast.makeText(this, "Error retrieving contact: ${e.message}", Toast.LENGTH_SHORT)
-                    .show()
-        } finally {
-            cursor?.close()
+            Toast.makeText(
+                    this,
+                    getString(R.string.error_retrieving_contact, e.message.orEmpty()),
+                    Toast.LENGTH_SHORT
+            ).show()
         }
     }
 
@@ -317,7 +335,7 @@ class AddEditScheduleActivity : AppCompatActivity() {
                         .setTimeFormat(TimeFormat.CLOCK_12H)
                         .setHour(selectedHour)
                         .setMinute(selectedMinute)
-                        .setTitleText("Select time")
+                        .setTitleText(getString(R.string.select_time_title))
                         .build()
 
         timePicker.addOnPositiveButtonClickListener {
@@ -377,7 +395,7 @@ class AddEditScheduleActivity : AppCompatActivity() {
 
         val picker =
                 MaterialDatePicker.Builder.datePicker()
-                        .setTitleText("Select start date")
+                        .setTitleText(getString(R.string.select_start_date))
                         .setSelection(selection)
                         .setCalendarConstraints(constraintsBuilder.build())
                         .build()
@@ -479,7 +497,7 @@ class AddEditScheduleActivity : AppCompatActivity() {
         }
 
         if (message.isEmpty()) {
-            Toast.makeText(this, "Please enter a message", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.please_enter_message), Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -513,15 +531,12 @@ class AddEditScheduleActivity : AppCompatActivity() {
                         createdAt = originalCreatedAt
                 )
 
+        // don't toast or finish here — wait for saveResult; we only finish when the ViewModel reports success.
         if (isEditMode) {
             viewModel.updateSchedule(schedule)
-            Toast.makeText(this, "Schedule updated", Toast.LENGTH_SHORT).show()
         } else {
             viewModel.insertSchedule(schedule)
-            Toast.makeText(this, "Schedule saved", Toast.LENGTH_SHORT).show()
         }
-
-        finish()
     }
 
     private fun isValidPhoneNumber(phoneNumber: String): Boolean {

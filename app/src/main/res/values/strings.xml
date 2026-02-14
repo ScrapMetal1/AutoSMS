@@ -49,4 +49,33 @@
     <string name="sort_enabled">Enabled Status</string>
     <string name="sort_ascending">Ascending</string>
     <string name="sort_descending">Descending</string>
+
+    <!-- Add/Edit Schedule -->
+    <string name="title_edit_schedule">Edit AutoSMS Schedule</string>
+    <string name="title_add_schedule">Add AutoSMS Schedule</string>
+    <string name="select_time_title">Select time</string>
+    <string name="select_start_date">Select start date</string>
+    <string name="please_enter_message">Please enter a message</string>
+    <string name="schedule_updated">Schedule updated</string>
+    <string name="schedule_saved">Schedule saved</string>
+    <string name="schedule_save_error">Could not save schedule. Please try again.</string>
+    <string name="error_contact_details">Unable to retrieve contact details</string>
+    <string name="error_retrieving_contact">Error retrieving contact: %s</string>
+
+    <!-- Main activity -->
+    <string name="permissions_granted">Permissions granted</string>
+    <string name="battery_optimization">Battery Optimization</string>
+    <string name="battery_optimization_message">To ensure your scheduled messages are sent exactly on time, AutoSMS needs to operate without background restrictions.\n\nPlease select \'No restrictions\' or \'Unrestricted\' in the following settings screen.</string>
+    <string name="open_settings">Open Settings</string>
+    <string name="later">Later</string>
+    <string name="permissions_required">Permissions Required</string>
+    <string name="permissions_required_message">AutoSMS requires SMS permission to function properly. Please grant this permission in Settings.</string>
+    <string name="settings_button">Settings</string>
+    <string name="cancel_button">Cancel</string>
+    <string name="delete_schedule">Delete Schedule</string>
+    <string name="delete_schedule_confirm">Are you sure you want to delete the SMS schedule for %s?</string>
+    <string name="delete_button">Delete</string>
+    <string name="schedule_deleted">Schedule deleted</string>
+    <string name="one_time">One Time</string>
+    <string name="every_format">Every %1$d %2$s</string>
 </resources>

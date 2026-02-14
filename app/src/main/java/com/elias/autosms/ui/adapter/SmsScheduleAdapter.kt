@@ -6,6 +6,7 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.elias.autosms.R
 import com.elias.autosms.data.SmsSchedule
 import com.elias.autosms.databinding.ItemSmsScheduleBinding
 
@@ -63,16 +64,21 @@ class SmsScheduleAdapter(
 
                 if (schedule.isRecurring) {
                     iconRecurring.visibility = android.view.View.VISIBLE
+                    // use string resources so "Every X Days" / "One Time" can be localized.
                     val frequencyText =
                             if (schedule.frequency == SmsSchedule.FREQUENCY_CUSTOM) {
-                                "Every ${schedule.period} ${schedule.periodUnit}"
+                                binding.root.context.getString(
+                                        R.string.every_format,
+                                        schedule.period,
+                                        schedule.periodUnit
+                                )
                             } else {
                                 schedule.frequency
                             }
                     textFrequency.text = frequencyText
                 } else {
                     iconRecurring.visibility = android.view.View.GONE
-                    textFrequency.text = "One Time"
+                    textFrequency.text = binding.root.context.getString(R.string.one_time)
                 }
             }
         }
