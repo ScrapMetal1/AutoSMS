@@ -54,7 +54,12 @@
 
 
 
-        <!-- Receiver to reschedule SMS tasks after device restart -->
+        <!-- gets woken by AlarmManager when it's time to send; kicks off the SMS job -->
+        <receiver
+            android:name=".receiver.AlarmReceiver"
+            android:exported="false" />
+
+        <!-- alarms don't survive reboot, so we reschedule all enabled ones here -->
         <receiver
             android:name=".receiver.BootReceiver"
             android:exported="false">

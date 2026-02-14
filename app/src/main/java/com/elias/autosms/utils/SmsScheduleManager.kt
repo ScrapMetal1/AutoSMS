@@ -1,26 +1,34 @@
 package com.elias.autosms.utils
 
+import android.app.AlarmManager
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
+import android.os.Build
 import android.util.Log
-import androidx.work.*
+import androidx.work.WorkManager
 import com.elias.autosms.data.SmsSchedule
-import com.elias.autosms.worker.SmsWorker
+import com.elias.autosms.receiver.AlarmReceiver
 import java.util.*
-import java.util.concurrent.TimeUnit
 
 class SmsScheduleManager(private val context: Context) {
 
-    private val workManager = WorkManager.getInstance(context)
+    private val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
-    // Schedules a daily recurring SMS work request
+    /**
+     * Schedules the next send using an exact alarm instead of a delayed WorkManager job.
+     * We used to use OneTimeWorkRequest with a long delay, but after ~7 days of the user
+     * not opening the app Android puts us in a standby bucket and throttles those jobs
+     * so badly they fire hours late — then SmsWorker's 2-hour staleness check skips the
+     * SMS and the whole schedule effectively dies. Exact alarms aren't throttled like that,
+     * so they fire on time even if the app hasn't been opened in weeks.
+     */
     fun scheduleRepeatingWork(
             schedule: SmsSchedule,
             isRescheduleForNextInterval: Boolean = false,
             allowCatchUp: Boolean = false
     ) {
-        val workName = "sms_work_${schedule.id}"
-
-        // Calculate initial delay until next occurrence
+        // figure out when the next occurrence should be
         val initialDelay =
                 if (!isRescheduleForNextInterval &&
                                 !allowCatchUp &&
@@ -28,13 +36,7 @@ class SmsScheduleManager(private val context: Context) {
                                         (schedule.frequency == SmsSchedule.FREQUENCY_CUSTOM &&
                                                 schedule.periodUnit == SmsSchedule.UNIT_HOURS))
                 ) {
-                    // Manual/UI Trigger for High-Frequency (Hourly) Schedule.
-                    // Constraint: "Start repeating at the scheduled time" relative to Day.
-                    // We DO NOT want to jump into the middle of an hourly sequence (e.g. 10am,
-                    // 11am)
-                    // if we missed the start. We want to wait for the next "clean" Daily start
-                    // time.
-                    // We temporarily treat it as DAILY to find the anchor point.
+                    // when the user first sets an hourly schedule we wait for the next "clean" daily time, not mid-hour
                     try {
                         calculateInitialDelay(
                                 schedule.copy(frequency = SmsSchedule.FREQUENCY_DAILY)
@@ -43,85 +45,84 @@ class SmsScheduleManager(private val context: Context) {
                         calculateInitialDelay(schedule)
                     }
                 } else {
-                    // Standard Logic: Worker logic (continue sequence) or Low-Frequency
-                    // (Daily/Weekly)
                     calculateInitialDelay(schedule)
                 }
 
-        val scheduledTime = System.currentTimeMillis() + initialDelay
+        val triggerAtMillis = System.currentTimeMillis() + initialDelay
 
-        // Create input data for the worker
-        val inputData =
-                workDataOf(
-                        "scheduleId" to schedule.id,
-                        "contactName" to schedule.contactName,
-                        "phoneNumber" to schedule.phoneNumber,
-                        "message" to schedule.message,
-                        "scheduled_time" to scheduledTime,
-                )
+        // this is what AlarmReceiver gets when the alarm goes off
+        val intent = Intent(context, AlarmReceiver::class.java).apply {
+            putExtra("scheduleId", schedule.id)
+            putExtra("contactName", schedule.contactName)
+            putExtra("phoneNumber", schedule.phoneNumber)
+            putExtra("scheduled_time", triggerAtMillis)
+        }
 
-        // Create one-time work request for the next occurrence
-        val workRequest =
-                OneTimeWorkRequestBuilder<SmsWorker>()
-                        .setInitialDelay(initialDelay, TimeUnit.MILLISECONDS)
-                        .setInputData(inputData)
-                        .setConstraints(
-                                Constraints.Builder()
-                                        .setRequiredNetworkType(NetworkType.NOT_REQUIRED)
-                                        .setRequiresBatteryNotLow(false)
-                                        .build()
-                        )
-                        .build()
+        val pendingIntent = PendingIntent.getBroadcast(
+                context,
+                schedule.id.toInt(),
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
 
-        // Schedule the work with REPLACE policy to avoid duplicates
-        // We use OneTimeWork instead of PeriodicWork to ensure exact timing
-        // and avoid drift. The Worker itself will schedule the next run.
-        workManager.enqueueUniqueWork(workName, ExistingWorkPolicy.REPLACE, workRequest)
+        // exact alarm so it fires even in Doze; fall back to inexact if they haven't granted the permission yet
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !alarmManager.canScheduleExactAlarms()) {
+            // still way better than a delayed WorkManager job
+            alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
+        } else {
+            alarmManager.setExact(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
+        }
 
         Log.d(
                 "SmsScheduleManager",
-                "Scheduled work for ${schedule.contactName} at ${java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date(scheduledTime))} (Reschedule: $isRescheduleForNextInterval)"
+                "Alarm set for ${schedule.contactName} at ${java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date(triggerAtMillis))} (Reschedule: $isRescheduleForNextInterval)"
         )
     }
 
-    // Cancels a scheduled work by ID
+    // kill the alarm and any WorkManager job that might already be queued for this schedule
     fun cancelWork(scheduleId: Long) {
-        val workName = "sms_work_$scheduleId"
-        workManager.cancelUniqueWork(workName)
-        Log.d("SmsScheduleManager", "Cancelled work for schedule ID: $scheduleId")
+        val intent = Intent(context, AlarmReceiver::class.java)
+        val pendingIntent = PendingIntent.getBroadcast(
+                context,
+                scheduleId.toInt(),
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        alarmManager.cancel(pendingIntent)
+
+        // in case the alarm already fired and enqueued work, cancel that too
+        WorkManager.getInstance(context).cancelUniqueWork("sms_work_$scheduleId")
+
+        Log.d("SmsScheduleManager", "Cancelled alarm + work for schedule ID: $scheduleId")
     }
 
-    // Calculates delay until the next occurrence of the scheduled time
+    // how long from now until the next time this schedule should fire
     fun calculateInitialDelay(schedule: SmsSchedule): Long {
         val now = Calendar.getInstance()
 
-        // We use the startDate (user selected date) and configured time as the anchor
-        // to prevent schedule drift and support future scheduling.
+        // start from the user's chosen start date + time, then step forward until we're past "now"
         val anchor = Calendar.getInstance()
-        // Use startDate for the date part
         val paramsCal = Calendar.getInstance()
         paramsCal.timeInMillis = schedule.startDate
 
         anchor.set(Calendar.YEAR, paramsCal.get(Calendar.YEAR))
         anchor.set(Calendar.MONTH, paramsCal.get(Calendar.MONTH))
         anchor.set(Calendar.DAY_OF_MONTH, paramsCal.get(Calendar.DAY_OF_MONTH))
-
-        // Use hour/minute from schedule
         anchor.set(Calendar.HOUR_OF_DAY, schedule.hour)
         anchor.set(Calendar.MINUTE, schedule.minute)
         anchor.set(Calendar.SECOND, 0)
         anchor.set(Calendar.MILLISECOND, 0)
 
-        // Capture the original day of month for monthly calculations to prevent drift
+        // need this for monthly — e.g. 31st in Feb becomes 28th
         val originalDayOfMonth = anchor.get(Calendar.DAY_OF_MONTH)
 
-        // Optimization: Fast-forward 'anchor' if it is far in the past
+        // if the anchor is way in the past, jump forward in big steps so we don't loop forever
         if (anchor.timeInMillis < now.timeInMillis) {
             val diffMillis = now.timeInMillis - anchor.timeInMillis
 
-            // Heuristic jumps based on frequency to get close to 'now'
-            // We under-shoot slightly to let the exact loop handle the final precision and edge
-            // cases (DST, month lengths)
+            // under-shoot a bit so the loop below can handle DST and month-length edge cases
             if (schedule.isRecurring) {
                 when (schedule.frequency) {
                     SmsSchedule.FREQUENCY_HOURLY -> {
@@ -137,12 +138,11 @@ class SmsScheduleManager(private val context: Context) {
                         if (weeks > 1) anchor.add(Calendar.WEEK_OF_YEAR, (weeks - 1).toInt())
                     }
                     SmsSchedule.FREQUENCY_MONTHLY -> {
-                        // Month calculations are tricky with lengths, we estimate 28 days to be
-                        // safe
+                        // months have different lengths so we approximate with 28 days
                         val approxMonths = diffMillis / (86400000L * 28)
                         if (approxMonths > 1) {
                             anchor.add(Calendar.MONTH, (approxMonths - 1).toInt())
-                            // Re-apply day-of-month fix after jump
+                            // then fix the day so we don't end up with invalid 31st etc
                             val maxDay = anchor.getActualMaximum(Calendar.DAY_OF_MONTH)
                             val targetDay =
                                     if (originalDayOfMonth > maxDay) maxDay else originalDayOfMonth
@@ -167,7 +167,7 @@ class SmsScheduleManager(private val context: Context) {
             }
         }
 
-        // Iterate until we find the NEXT valid occurrence after 'now'
+        // step forward until we're past "now" — that's our next run time
         while (anchor.timeInMillis <= now.timeInMillis) {
             if (schedule.isRecurring) {
                 when (schedule.frequency) {
@@ -181,10 +181,8 @@ class SmsScheduleManager(private val context: Context) {
                         anchor.add(Calendar.DAY_OF_YEAR, 7)
                     }
                     SmsSchedule.FREQUENCY_MONTHLY -> {
-                        // Add month(s)
                         anchor.add(Calendar.MONTH, 1)
-
-                        // Handle Day-of-Month Drift (e.g. 31st -> 28th -> 31st)
+                        // clamp day so we don't end up on the 31st in February
                         val maxDay = anchor.getActualMaximum(Calendar.DAY_OF_MONTH)
                         val targetDay =
                                 if (originalDayOfMonth > maxDay) maxDay else originalDayOfMonth
@@ -198,11 +196,10 @@ class SmsScheduleManager(private val context: Context) {
                             anchor.add(Calendar.DAY_OF_YEAR, p)
                         }
                     }
-                    else -> anchor.add(Calendar.DAY_OF_YEAR, 1) // Default to Daily
+                    else -> anchor.add(Calendar.DAY_OF_YEAR, 1)
                 }
             } else {
-                // Non-recurring: Treat as "Next Occurrence of this Time" (Daily behavior)
-                // If the time has passed today, we move to tomorrow.
+                // one-off: if we're past the time today, next run is tomorrow
                 anchor.add(Calendar.DAY_OF_YEAR, 1)
             }
         }
