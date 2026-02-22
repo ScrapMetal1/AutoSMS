@@ -13,6 +13,8 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.IntentCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.ViewModelProvider
 import com.elias.autosms.R
 import com.elias.autosms.data.SmsSchedule
@@ -58,6 +60,12 @@ class AddEditScheduleActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityAddEditScheduleBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { v, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            insets
+        }
 
         setupViewModel()
         setupViews()
