@@ -59,15 +59,18 @@
             android:name=".receiver.AlarmReceiver"
             android:exported="false" />
 
-        <!-- alarms don't survive reboot, so we reschedule all enabled ones here -->
+        <!-- alarms don't survive reboot, so we reschedule all enabled ones here.
+             BOOT_COMPLETED and MY_PACKAGE_REPLACED must be in separate filters because
+             putting <data scheme="package"> in the same filter would block BOOT_COMPLETED
+             (it carries no data URI, so the data test fails and the broadcast is never delivered). -->
         <receiver
             android:name=".receiver.BootReceiver"
             android:exported="false">
             <intent-filter android:priority="1000">
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+            <intent-filter android:priority="1000">
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
-                <action android:name="android.intent.action.PACKAGE_REPLACED" />
-                <data android:scheme="package" />
             </intent-filter>
         </receiver>
 

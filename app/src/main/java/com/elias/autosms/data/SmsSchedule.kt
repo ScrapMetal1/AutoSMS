@@ -20,7 +20,11 @@ data class SmsSchedule(
         val isEnabled: Boolean = true,
         val isRecurring: Boolean = false,
         val startDate: Long = System.currentTimeMillis(),
-        val createdAt: Long = System.currentTimeMillis()
+        val createdAt: Long = System.currentTimeMillis(),
+        // whether to still send if the phone was off / out of service at the scheduled time
+        val sendIfMissed: Boolean = true,
+        // how many minutes past the target time we're still willing to send (-1 = no limit)
+        val missedCutoffMinutes: Int = DEFAULT_CUTOFF_MINUTES
 ) : Parcelable {
 
     // Formats the time in 12-hour format with AM/PM for UI display
@@ -46,5 +50,8 @@ data class SmsSchedule(
         const val FREQUENCY_CUSTOM = "Custom"
         const val UNIT_HOURS = "Hours"
         const val UNIT_DAYS = "Days"
+
+        const val DEFAULT_CUTOFF_MINUTES = 120
+        const val CUTOFF_NO_LIMIT = -1
     }
 }

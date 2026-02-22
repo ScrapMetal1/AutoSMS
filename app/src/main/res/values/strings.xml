@@ -78,4 +78,19 @@
     <string name="schedule_deleted">Schedule deleted</string>
     <string name="one_time">One Time</string>
     <string name="every_format">Every %1$d %2$s</string>
+
+    <!-- Send-if-missed -->
+    <string name="send_if_missed">Send late if missed</string>
+    <string name="send_if_missed_subtitle">If your phone was off or the send was delayed (e.g. by battery optimization) at the scheduled time.</string>
+    <string name="send_within">Send within</string>
+
+    <string-array name="missed_cutoff_options">
+        <item>5 minutes</item>
+        <item>15 minutes</item>
+        <item>30 minutes</item>
+        <item>1 hour</item>
+        <item>2 hours</item>
+        <item>6 hours</item>
+        <item>No limit</item>
+    </string-array>
 </resources>

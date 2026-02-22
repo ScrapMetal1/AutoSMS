@@ -14,6 +14,7 @@ import java.util.*
 class SmsScheduleManager(private val context: Context) {
 
     private val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+    private val alarmPrefs = context.getSharedPreferences("sms_alarm_times", Context.MODE_PRIVATE)
 
     /**
      * Schedules the next send using an exact alarm instead of a delayed WorkManager job.
@@ -75,6 +76,8 @@ class SmsScheduleManager(private val context: Context) {
             alarmManager.setExact(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
         }
 
+        alarmPrefs.edit().putLong("alarm_${schedule.id}", triggerAtMillis).apply()
+
         Log.d(
                 "SmsScheduleManager",
                 "Alarm set for ${schedule.contactName} at ${java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date(triggerAtMillis))} (Reschedule: $isRescheduleForNextInterval)"
@@ -95,7 +98,13 @@ class SmsScheduleManager(private val context: Context) {
         // in case the alarm already fired and enqueued work, cancel that too
         WorkManager.getInstance(context).cancelUniqueWork("sms_work_$scheduleId")
 
+        alarmPrefs.edit().remove("alarm_$scheduleId").apply()
+
         Log.d("SmsScheduleManager", "Cancelled alarm + work for schedule ID: $scheduleId")
+    }
+
+    fun getStoredAlarmTime(scheduleId: Long): Long {
+        return alarmPrefs.getLong("alarm_$scheduleId", 0)
     }
 
     // how long from now until the next time this schedule should fire

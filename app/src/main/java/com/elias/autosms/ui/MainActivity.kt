@@ -7,6 +7,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.util.Log
 import android.widget.RadioGroup
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -15,14 +16,18 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.elias.autosms.R
 import com.elias.autosms.databinding.ActivityMainBinding
+import com.elias.autosms.repository.SmsScheduleRepository
 import com.elias.autosms.ui.adapter.SmsScheduleAdapter
 import com.elias.autosms.viewmodel.MainViewModel
 import com.elias.autosms.viewmodel.MainViewModelFactory
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.button.MaterialButtonToggleGroup
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
 
@@ -73,6 +78,7 @@ class MainActivity : AppCompatActivity() {
         setupSortButton() // Call the new setupSortButton
         checkPermissions()
         observeSchedules()
+        restoreAlarmsIfNeeded()
     }
 
     override fun onDestroy() {
@@ -196,6 +202,19 @@ class MainActivity : AppCompatActivity() {
             }
 
             dialog.show()
+        }
+    }
+
+    // Re-sets alarms for all enabled schedules. Covers the case where alarms were
+    // silently lost (e.g. user force-stopped the app or exact-alarm permission was revoked).
+    // Idempotent: if alarms are already set, this just overwrites them with the same values.
+    private fun restoreAlarmsIfNeeded() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                SmsScheduleRepository(applicationContext).rescheduleAllEnabled()
+            } catch (e: Exception) {
+                Log.e("MainActivity", "Failed to restore alarms", e)
+            }
         }
     }
 

@@ -33,16 +33,21 @@ class SmsWorker(context: Context, params: WorkerParameters) : CoroutineWorker(co
                 return Result.success()
             }
 
-            // 2. The Validation Logic using Timestamp
+            // check if we're past the user's "send late" window
             if (scheduledTime > 0) {
                 val currentTime = System.currentTimeMillis()
-                val diff = currentTime - scheduledTime
+                val diffMinutes = (currentTime - scheduledTime) / 60000
 
-                // 2 hours in milliseconds = 7200000
-                if (diff > 7200000) {
-                    Log.w("SmsWorker", "Skipping SMS. Too late. Diff: ${diff / 60000} mins")
-                    // Return success so we don't retry this specific stale job,
-                    // but the 'finally' block will still schedule the NEXT recurring one.
+                if (!schedule.sendIfMissed && diffMinutes > 1) {
+                    // user said "don't send late" — skip if we're more than a minute past
+                    Log.w("SmsWorker", "Skipping SMS. sendIfMissed=false, ${diffMinutes}min late")
+                    return Result.success()
+                }
+
+                val cutoff = schedule.missedCutoffMinutes
+                if (cutoff != com.elias.autosms.data.SmsSchedule.CUTOFF_NO_LIMIT && diffMinutes > cutoff) {
+                    // past the cutoff window — skip this one, but the finally block will schedule the next
+                    Log.w("SmsWorker", "Skipping SMS. ${diffMinutes}min late, cutoff=${cutoff}min")
                     return Result.success()
                 }
             }

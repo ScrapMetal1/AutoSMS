@@ -232,6 +232,20 @@ class AddEditScheduleActivity : AppCompatActivity() {
 
         updateRecurrenceWarning()
 
+        // -- send-if-missed toggle + cutoff dropdown --
+        val cutoffOptions = resources.getStringArray(R.array.missed_cutoff_options)
+        val cutoffAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, cutoffOptions)
+        binding.autoCompleteMissedCutoff.setAdapter(cutoffAdapter)
+
+        binding.switchSendIfMissed.isChecked = true
+        binding.inputLayoutMissedCutoff.isEnabled = true
+        binding.inputLayoutMissedCutoff.alpha = 1.0f
+
+        binding.switchSendIfMissed.setOnCheckedChangeListener { _, isChecked ->
+            binding.inputLayoutMissedCutoff.isEnabled = isChecked
+            binding.inputLayoutMissedCutoff.alpha = if (isChecked) 1.0f else 0.5f
+        }
+
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
     }
 
@@ -283,6 +297,12 @@ class AddEditScheduleActivity : AppCompatActivity() {
                 binding.layoutCustomPeriod.visibility = View.GONE
             }
             updateRecurrenceWarning()
+
+            // --- send-if-missed ---
+            binding.switchSendIfMissed.isChecked = schedule.sendIfMissed
+            binding.inputLayoutMissedCutoff.isEnabled = schedule.sendIfMissed
+            binding.inputLayoutMissedCutoff.alpha = if (schedule.sendIfMissed) 1.0f else 0.5f
+            binding.autoCompleteMissedCutoff.setText(cutoffMinutesToLabel(schedule.missedCutoffMinutes), false)
         } else {
             title = getString(R.string.title_add_schedule)
         }
@@ -528,7 +548,11 @@ class AddEditScheduleActivity : AppCompatActivity() {
                         isRecurring = isRecurring,
                         isEnabled = true,
                         startDate = selectedDateMillis,
-                        createdAt = originalCreatedAt
+                        createdAt = originalCreatedAt,
+                        sendIfMissed = binding.switchSendIfMissed.isChecked,
+                        missedCutoffMinutes = cutoffLabelToMinutes(
+                                binding.autoCompleteMissedCutoff.text.toString()
+                        )
                 )
 
         // don't toast or finish here — wait for saveResult; we only finish when the ViewModel reports success.
@@ -536,6 +560,33 @@ class AddEditScheduleActivity : AppCompatActivity() {
             viewModel.updateSchedule(schedule)
         } else {
             viewModel.insertSchedule(schedule)
+        }
+    }
+
+    // maps between the dropdown labels and the minutes value we store in the DB
+    private fun cutoffLabelToMinutes(label: String): Int {
+        return when (label) {
+            "5 minutes" -> 5
+            "15 minutes" -> 15
+            "30 minutes" -> 30
+            "1 hour" -> 60
+            "2 hours" -> 120
+            "6 hours" -> 360
+            "No limit" -> SmsSchedule.CUTOFF_NO_LIMIT
+            else -> SmsSchedule.DEFAULT_CUTOFF_MINUTES
+        }
+    }
+
+    private fun cutoffMinutesToLabel(minutes: Int): String {
+        return when (minutes) {
+            5 -> "5 minutes"
+            15 -> "15 minutes"
+            30 -> "30 minutes"
+            60 -> "1 hour"
+            120 -> "2 hours"
+            360 -> "6 hours"
+            SmsSchedule.CUTOFF_NO_LIMIT -> "No limit"
+            else -> "2 hours"
         }
     }
 
