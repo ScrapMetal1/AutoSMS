@@ -4,7 +4,6 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import android.util.Log
 import androidx.work.WorkManager
 import com.elias.autosms.data.SmsSchedule
@@ -17,12 +16,14 @@ class SmsScheduleManager(private val context: Context) {
     private val alarmPrefs = context.getSharedPreferences("sms_alarm_times", Context.MODE_PRIVATE)
 
     /**
-     * Schedules the next send using an exact alarm instead of a delayed WorkManager job.
-     * We used to use OneTimeWorkRequest with a long delay, but after ~7 days of the user
-     * not opening the app Android puts us in a standby bucket and throttles those jobs
-     * so badly they fire hours late — then SmsWorker's 2-hour staleness check skips the
-     * SMS and the whole schedule effectively dies. Exact alarms aren't throttled like that,
-     * so they fire on time even if the app hasn't been opened in weeks.
+     * Schedules the next send using setAlarmClock().
+     *
+     * We tried setExactAndAllowWhileIdle() but that still dies after ~10 days: Android
+     * moves the app to the "Restricted" standby bucket if the user hasn't opened it,
+     * and restricted apps can't fire exact alarms at all. setAlarmClock() is the only
+     * alarm type that's fully exempt from Doze, standby buckets, and battery restrictions.
+     * The trade-off is a small alarm icon in the status bar, which is fine for an SMS
+     * scheduling app — it tells the user something is scheduled.
      */
     fun scheduleRepeatingWork(
             schedule: SmsSchedule,
@@ -66,15 +67,18 @@ class SmsScheduleManager(private val context: Context) {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // exact alarm so it fires even in Doze; fall back to inexact if they haven't granted the permission yet
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !alarmManager.canScheduleExactAlarms()) {
-            // still way better than a delayed WorkManager job
-            alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
-        } else {
-            alarmManager.setExact(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
-        }
+        // "show" intent — tapping the alarm icon in the status bar opens the app
+        val showIntent = PendingIntent.getActivity(
+                context,
+                0,
+                Intent(context, com.elias.autosms.ui.MainActivity::class.java),
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        // setAlarmClock is the last resort option if nothing elsee works: it is  exempt from Doze, standby buckets, and all battery restrictions. setExactAndAllowWhileIdle dies after ~10 days in the restricted bucket; this doesn't.
+        
+        val alarmInfo = AlarmManager.AlarmClockInfo(triggerAtMillis, showIntent)
+        alarmManager.setAlarmClock(alarmInfo, pendingIntent)
 
         alarmPrefs.edit().putLong("alarm_${schedule.id}", triggerAtMillis).apply()
 
