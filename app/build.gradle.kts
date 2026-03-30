@@ -13,7 +13,7 @@ android {
         applicationId = "com.elias.autosms"
         minSdk = 21
         targetSdk = 35
-        versionCode = 8
+        versionCode = 9
         versionName = "1.7"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
