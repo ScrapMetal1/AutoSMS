@@ -7,10 +7,16 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [SmsSchedule::class], version = 8, exportSchema = false)
+@Database(
+        entities = [SmsSchedule::class, AutoReplyRule::class, AutoReplyHistory::class],
+        version = 9,
+        exportSchema = false
+)
 abstract class SmsScheduleDatabase : RoomDatabase() {
 
     abstract fun smsScheduleDao(): SmsScheduleDao
+    abstract fun autoReplyRuleDao(): AutoReplyRuleDao
+    abstract fun autoReplyHistoryDao(): AutoReplyHistoryDao
 
     companion object {
         @Volatile private var INSTANCE: SmsScheduleDatabase? = null
@@ -23,6 +29,33 @@ abstract class SmsScheduleDatabase : RoomDatabase() {
             }
         }
 
+        // Adds AI auto-reply tables. Empty on first creation, populated when
+        // the user starts adding rules from the new premium feature.
+        private val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                        "CREATE TABLE IF NOT EXISTS auto_reply_rules (" +
+                                "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                                "displayName TEXT NOT NULL, " +
+                                "phoneNumber TEXT NOT NULL, " +
+                                "systemPrompt TEXT NOT NULL, " +
+                                "isEnabled INTEGER NOT NULL DEFAULT 1, " +
+                                "createdAt INTEGER NOT NULL)"
+                )
+                db.execSQL(
+                        "CREATE TABLE IF NOT EXISTS auto_reply_history (" +
+                                "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                                "ruleId INTEGER, " +
+                                "phoneNumber TEXT NOT NULL, " +
+                                "inboundText TEXT NOT NULL, " +
+                                "replyText TEXT, " +
+                                "status TEXT NOT NULL, " +
+                                "errorMessage TEXT, " +
+                                "timestamp INTEGER NOT NULL)"
+                )
+            }
+        }
+
         fun getDatabase(context: Context): SmsScheduleDatabase {
             return INSTANCE
                     ?: synchronized(this) {
@@ -32,7 +65,7 @@ abstract class SmsScheduleDatabase : RoomDatabase() {
                                                 SmsScheduleDatabase::class.java,
                                                 "sms_schedule_database"
                                         )
-                                        .addMigrations(MIGRATION_7_8)
+                                        .addMigrations(MIGRATION_7_8, MIGRATION_8_9)
                                         .fallbackToDestructiveMigration()
                                         .build()
                         INSTANCE = instance

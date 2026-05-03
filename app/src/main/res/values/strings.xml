@@ -93,4 +93,31 @@
         <item>6 hours</item>
         <item>No limit</item>
     </string-array>
+
+    <!-- AI Auto Replies (premium) -->
+    <string name="auto_reply_title">AI Auto Replies</string>
+    <string name="auto_reply_subtitle">Premium · Reply to texts automatically with Gemini</string>
+    <string name="auto_reply_listener_label">AutoSMS Auto Reply</string>
+    <string name="auto_reply_empty">No auto-reply rules yet.\nTap + to add one.</string>
+    <string name="auto_reply_add">Add auto-reply rule</string>
+    <string name="auto_reply_edit_title">Edit auto-reply rule</string>
+    <string name="auto_reply_add_title">Add auto-reply rule</string>
+    <string name="auto_reply_display_name">Label</string>
+    <string name="auto_reply_display_name_helper">A name you\'ll recognise (e.g. \"Mum\")</string>
+    <string name="auto_reply_prompt">Reply instructions</string>
+    <string name="auto_reply_prompt_helper">Describe how the AI should reply, e.g. \"Politely say I\'m driving and will reply later.\"</string>
+    <string name="auto_reply_enabled">Rule enabled</string>
+    <string name="auto_reply_test">Test reply</string>
+    <string name="auto_reply_test_inbound">Sample message: \"Hey, are you free for lunch?\"</string>
+    <string name="auto_reply_save">Save rule</string>
+    <string name="auto_reply_setup_title">Allow notification access</string>
+    <string name="auto_reply_setup_body">To reply to incoming texts on your behalf, AutoSMS needs notification access. We only read SMS notifications from your messaging app — nothing else — and only to send replies for the rules you configure.\n\nNo SMS permissions are requested. Replies are sent through your existing SMS app.</string>
+    <string name="auto_reply_setup_open">Open notification access settings</string>
+    <string name="auto_reply_setup_done">Notification access granted</string>
+    <string name="auto_reply_premium_locked">Premium feature</string>
+    <string name="auto_reply_premium_locked_body">Subscribe to unlock AI auto-replies.</string>
+    <string name="auto_reply_subscribe">Subscribe</string>
+    <string name="auto_reply_restore">Restore purchases</string>
+    <string name="auto_reply_premium_active">You\'re subscribed — auto-replies are active.</string>
+    <string name="auto_reply_delete_confirm">Delete this auto-reply rule?</string>
 </resources>

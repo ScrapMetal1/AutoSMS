@@ -19,3 +19,6 @@ local.properties
 /app/release/
 /release/
 keystore/
+
+# Firebase config — contains project IDs, must not be committed.
+/app/google-services.json

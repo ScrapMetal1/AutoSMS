@@ -5,6 +5,13 @@ plugins {
     id("kotlin-parcelize")
 }
 
+// Apply google-services only when google-services.json is present so the
+// build still works on a fresh checkout. AI features will fail at runtime
+// (handled gracefully in AiReplyGenerator) until the file is added.
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
+}
+
 android {
     namespace = "com.elias.autosms"
     compileSdk = 35
@@ -82,7 +89,17 @@ dependencies {
     // RecyclerView
     implementation("androidx.recyclerview:recyclerview:1.3.2")
 
+    // Coroutines (used by BillingManager + AI generator)
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
+    // Firebase AI Logic — Vertex AI Gemini from the client, secured by App Check.
+    // Requires app/google-services.json (placeholder until user drops it in).
+    implementation(platform("com.google.firebase:firebase-bom:33.15.0"))
+    implementation("com.google.firebase:firebase-ai")
+    implementation("com.google.firebase:firebase-appcheck-playintegrity")
+
+    // Google Play Billing for the premium subscription (free trial configured in Play Console).
+    implementation("com.android.billingclient:billing-ktx:7.1.1")
 
     // Testing
     testImplementation("junit:junit:4.13.2")

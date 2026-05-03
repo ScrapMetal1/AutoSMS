@@ -12,6 +12,17 @@
     <!-- Optional permission for better reliability -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
+    <!-- Vertex AI / Firebase calls. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Used by the AI auto-reply contact picker only; rules can also be created
+         from a raw phone number with no contacts access. -->
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
+
+    <!-- Deliberately NOT requested: RECEIVE_SMS / READ_SMS. Those are restricted
+         by Google Play's SMS & Call Log policy to default SMS handlers. We use
+         NotificationListenerService + the system messenger's RemoteInput Reply
+         action instead, which keeps us policy-compliant. -->
+
     <!-- Declare telephony feature as not required for ChromeOS compatibility -->
     <uses-feature android:name="android.hardware.telephony" android:required="false" />
 
@@ -52,7 +63,44 @@
             android:configChanges="orientation|screenSize|keyboardHidden"
             android:windowSoftInputMode="adjustResize" />
 
+        <!-- AI auto-reply screens (premium feature). -->
+        <activity
+            android:name=".ui.AutoReplyListActivity"
+            android:exported="false"
+            android:parentActivityName=".ui.MainActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:windowSoftInputMode="adjustResize" />
 
+        <activity
+            android:name=".ui.AddEditAutoReplyRuleActivity"
+            android:exported="false"
+            android:parentActivityName=".ui.AutoReplyListActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
+            android:name=".ui.AutoReplySetupActivity"
+            android:exported="false"
+            android:parentActivityName=".ui.AutoReplyListActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden" />
+
+        <activity
+            android:name=".ui.PremiumActivity"
+            android:exported="false"
+            android:parentActivityName=".ui.MainActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden" />
+
+        <!-- Watches notifications posted by the user's SMS app and fulfils the
+             notification's RemoteInput Reply action with a Gemini-generated reply. -->
+        <service
+            android:name=".service.SmsNotificationListenerService"
+            android:exported="true"
+            android:label="@string/auto_reply_listener_label"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
 
         <!-- gets woken by AlarmManager when it's time to send; kicks off the SMS job -->
         <receiver
