@@ -90,6 +90,20 @@
             android:parentActivityName=".ui.MainActivity"
             android:configChanges="orientation|screenSize|keyboardHidden" />
 
+        <activity
+            android:name=".ui.ContextDocumentListActivity"
+            android:exported="false"
+            android:parentActivityName=".ui.AutoReplyListActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
+            android:name=".ui.AddEditContextDocumentActivity"
+            android:exported="false"
+            android:parentActivityName=".ui.ContextDocumentListActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:windowSoftInputMode="adjustResize" />
+
         <!-- Watches notifications posted by the user's SMS app and fulfils the
              notification's RemoteInput Reply action with a Gemini-generated reply. -->
         <service

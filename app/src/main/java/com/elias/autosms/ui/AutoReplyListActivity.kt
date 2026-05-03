@@ -92,6 +92,25 @@ class AutoReplyListActivity : AppCompatActivity() {
         return true
     }
 
+    override fun onCreateOptionsMenu(menu: android.view.Menu?): Boolean {
+        menuInflater.inflate(R.menu.menu_auto_reply_list, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: android.view.MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.action_context_documents -> {
+                startActivity(Intent(this, ContextDocumentListActivity::class.java))
+                true
+            }
+            R.id.action_setup -> {
+                startActivity(Intent(this, AutoReplySetupActivity::class.java))
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
+        }
+    }
+
     // Premium gate: if not entitled, send the user to the paywall instead of
     // letting them configure rules they can't actually run.
     private fun observeEntitlement() {

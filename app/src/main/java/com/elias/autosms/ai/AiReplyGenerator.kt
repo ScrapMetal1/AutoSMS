@@ -55,11 +55,23 @@ class AiReplyGenerator(private val context: Context) {
         }
     }
 
-    suspend fun generate(systemPrompt: String, inbound: String): Result {
+    /**
+     * Generates a reply for [inbound] following [systemPrompt].
+     *
+     * [contextDocuments] are user-supplied background documents (FAQs, notes,
+     * etc.) that get folded into the prompt as a labelled "Background" section.
+     * The model is instructed to ground replies in this material when relevant
+     * and ignore it when not. Pass an empty list when no docs apply.
+     */
+    suspend fun generate(
+            systemPrompt: String,
+            inbound: String,
+            contextDocuments: List<ContextSnippet> = emptyList()
+    ): Result {
         val m = model ?: return Result.NotConfigured
         return try {
             val prompt = content {
-                text(buildPrompt(systemPrompt, inbound))
+                text(buildPrompt(systemPrompt, inbound, contextDocuments))
             }
             val response = m.generateContent(prompt)
             val text = response.text?.trim().orEmpty()
@@ -76,25 +88,45 @@ class AiReplyGenerator(private val context: Context) {
         }
     }
 
+    /** Title + body pair for a single piece of user-supplied background context. */
+    data class ContextSnippet(val title: String, val body: String)
+
     // We fold the per-rule instruction into the user turn rather than using a
     // separate systemInstruction to keep behaviour consistent across model
     // versions that don't honour systemInstruction the same way. The wrapper
     // also constrains length and tone so replies remain SMS-appropriate.
-    private fun buildPrompt(systemPrompt: String, inbound: String): String = """
-        You are an SMS auto-responder for the user. Reply on the user's behalf
-        following these instructions:
+    private fun buildPrompt(
+            systemPrompt: String,
+            inbound: String,
+            documents: List<ContextSnippet>
+    ): String {
+        val backgroundBlock = if (documents.isEmpty()) "" else buildString {
+            append("Background information you may reference if relevant. ")
+            append("Treat each block as authoritative for facts about the user; ")
+            append("ignore it if it is not relevant to this message.\n\n")
+            documents.forEach { doc ->
+                append("=== ").append(doc.title.trim().ifEmpty { "Untitled" }).append(" ===\n")
+                append(doc.body.trim()).append("\n\n")
+            }
+        }
 
-        ${systemPrompt.trim()}
-
-        Hard rules:
-        - Reply with the message text only — no preamble, no quotes, no signature.
-        - Keep it under 300 characters when possible.
-        - Match the tone the instructions imply.
-        - Never invent commitments, times, or facts that aren't in the instructions.
-
-        Incoming message:
-        ${inbound.trim()}
-    """.trimIndent()
+        return buildString {
+            append("You are an SMS auto-responder for the user. ")
+            append("Reply on the user's behalf following these instructions:\n\n")
+            append(systemPrompt.trim()).append("\n\n")
+            if (backgroundBlock.isNotEmpty()) {
+                append(backgroundBlock)
+            }
+            append("Hard rules:\n")
+            append("- Reply with the message text only — no preamble, no quotes, no signature.\n")
+            append("- Keep it under 300 characters when possible.\n")
+            append("- Match the tone the instructions imply.\n")
+            append("- Use the Background only when it directly addresses the message; ")
+            append("never invent facts that aren't in the instructions or Background.\n\n")
+            append("Incoming message:\n")
+            append(inbound.trim())
+        }
+    }
 
     companion object {
         private const val TAG = "AiReplyGenerator"

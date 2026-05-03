@@ -8,8 +8,13 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-        entities = [SmsSchedule::class, AutoReplyRule::class, AutoReplyHistory::class],
-        version = 9,
+        entities = [
+            SmsSchedule::class,
+            AutoReplyRule::class,
+            AutoReplyHistory::class,
+            ContextDocument::class
+        ],
+        version = 10,
         exportSchema = false
 )
 abstract class SmsScheduleDatabase : RoomDatabase() {
@@ -17,6 +22,7 @@ abstract class SmsScheduleDatabase : RoomDatabase() {
     abstract fun smsScheduleDao(): SmsScheduleDao
     abstract fun autoReplyRuleDao(): AutoReplyRuleDao
     abstract fun autoReplyHistoryDao(): AutoReplyHistoryDao
+    abstract fun contextDocumentDao(): ContextDocumentDao
 
     companion object {
         @Volatile private var INSTANCE: SmsScheduleDatabase? = null
@@ -56,6 +62,21 @@ abstract class SmsScheduleDatabase : RoomDatabase() {
             }
         }
 
+        // Adds the context_documents table for AI prompt grounding.
+        private val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                        "CREATE TABLE IF NOT EXISTS context_documents (" +
+                                "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                                "title TEXT NOT NULL, " +
+                                "content TEXT NOT NULL, " +
+                                "isEnabled INTEGER NOT NULL DEFAULT 1, " +
+                                "createdAt INTEGER NOT NULL, " +
+                                "updatedAt INTEGER NOT NULL)"
+                )
+            }
+        }
+
         fun getDatabase(context: Context): SmsScheduleDatabase {
             return INSTANCE
                     ?: synchronized(this) {
@@ -65,7 +86,7 @@ abstract class SmsScheduleDatabase : RoomDatabase() {
                                                 SmsScheduleDatabase::class.java,
                                                 "sms_schedule_database"
                                         )
-                                        .addMigrations(MIGRATION_7_8, MIGRATION_8_9)
+                                        .addMigrations(MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10)
                                         .fallbackToDestructiveMigration()
                                         .build()
                         INSTANCE = instance

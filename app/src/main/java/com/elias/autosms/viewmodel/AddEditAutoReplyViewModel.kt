@@ -9,11 +9,13 @@ import androidx.lifecycle.viewModelScope
 import com.elias.autosms.ai.AiReplyGenerator
 import com.elias.autosms.data.AutoReplyRule
 import com.elias.autosms.repository.AutoReplyRepository
+import com.elias.autosms.repository.ContextDocumentRepository
 import kotlinx.coroutines.launch
 
 class AddEditAutoReplyViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = AutoReplyRepository(application)
+    private val documents = ContextDocumentRepository(application)
     private val generator = AiReplyGenerator(application)
 
     val testResult = MutableLiveData<String?>()
@@ -44,7 +46,10 @@ class AddEditAutoReplyViewModel(application: Application) : AndroidViewModel(app
         }
         isTesting.value = true
         viewModelScope.launch {
-            val result = generator.generate(prompt, syntheticInbound)
+            val snippets = documents.getEnabled().map {
+                AiReplyGenerator.ContextSnippet(it.title, it.content)
+            }
+            val result = generator.generate(prompt, syntheticInbound, snippets)
             testResult.postValue(
                     when (result) {
                         is AiReplyGenerator.Result.Success -> result.reply

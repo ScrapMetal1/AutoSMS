@@ -13,6 +13,7 @@ import com.elias.autosms.ai.AiReplyGenerator
 import com.elias.autosms.billing.BillingManager
 import com.elias.autosms.data.AutoReplyHistory
 import com.elias.autosms.repository.AutoReplyRepository
+import com.elias.autosms.repository.ContextDocumentRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -36,6 +37,7 @@ class SmsNotificationListenerService : NotificationListenerService() {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     private val repository by lazy { AutoReplyRepository(applicationContext) }
+    private val documents by lazy { ContextDocumentRepository(applicationContext) }
     private val generator by lazy { AiReplyGenerator(applicationContext) }
     private val billing by lazy { BillingManager.get(applicationContext) }
 
@@ -90,7 +92,11 @@ class SmsNotificationListenerService : NotificationListenerService() {
                 return
             }
 
-            when (val result = generator.generate(rule.systemPrompt, body)) {
+            val snippets = documents.getEnabled().map {
+                AiReplyGenerator.ContextSnippet(it.title, it.content)
+            }
+
+            when (val result = generator.generate(rule.systemPrompt, body, snippets)) {
                 is AiReplyGenerator.Result.Success -> {
                     val sent = sendReply(replyAction, result.reply)
                     repository.logHistory(

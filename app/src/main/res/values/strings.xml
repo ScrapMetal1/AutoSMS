@@ -120,4 +120,18 @@
     <string name="auto_reply_restore">Restore purchases</string>
     <string name="auto_reply_premium_active">You\'re subscribed — auto-replies are active.</string>
     <string name="auto_reply_delete_confirm">Delete this auto-reply rule?</string>
+
+    <!-- Context documents (premium AI grounding) -->
+    <string name="context_documents_title">Context documents</string>
+    <string name="context_documents_empty">No context documents yet.\nAdd notes, FAQs, or business hours so the AI can reference them when replying.</string>
+    <string name="context_document_add">Add context document</string>
+    <string name="context_document_add_title">Add context document</string>
+    <string name="context_document_edit_title">Edit context document</string>
+    <string name="context_document_title">Title</string>
+    <string name="context_document_content">Content</string>
+    <string name="context_document_content_helper">Plain text the AI can reference when replying. Up to 100,000 characters per document.</string>
+    <string name="context_document_import">Import a .txt file</string>
+    <string name="context_document_save">Save document</string>
+    <string name="context_document_saved">Document saved</string>
+    <string name="context_document_delete_confirm">Delete this document?</string>
 </resources>
