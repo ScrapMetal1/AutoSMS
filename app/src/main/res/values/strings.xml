@@ -134,4 +134,37 @@
     <string name="context_document_save">Save document</string>
     <string name="context_document_saved">Document saved</string>
     <string name="context_document_delete_confirm">Delete this document?</string>
+
+    <!-- Main screen polish -->
+    <string name="main_section_schedules">Scheduled messages</string>
+    <string name="main_empty_title">No schedules yet</string>
+    <string name="main_empty_subtitle">Tap the + button to create your first scheduled SMS.</string>
+    <string name="main_fab_add">Add a scheduled SMS</string>
+
+    <!-- Premium screen polish -->
+    <string name="premium_hero_title">AutoSMS Premium</string>
+    <string name="premium_feature_replies">AI auto-replies powered by Gemini</string>
+    <string name="premium_feature_replies_sub">Reply to incoming texts automatically based on per-contact instructions you write.</string>
+    <string name="premium_feature_context">Context documents</string>
+    <string name="premium_feature_context_sub">Add notes, FAQs, or business hours and the AI uses them to ground every reply.</string>
+    <string name="premium_feature_safe">Sent through your SMS app</string>
+    <string name="premium_feature_safe_sub">Replies go through your existing messaging app — no special SMS permissions ever requested.</string>
+    <string name="premium_no_offer">Subscription pricing isn\'t available right now. Check your internet connection or try again later.</string>
+    <string name="premium_legal">Subscription auto-renews unless cancelled. Manage in Google Play. Trial period and pricing shown in checkout.</string>
+
+    <!-- Setup screen polish -->
+    <string name="auto_reply_setup_step1">Open notification access</string>
+    <string name="auto_reply_setup_step1_sub">Find AutoSMS in the list and toggle it on.</string>
+    <string name="auto_reply_setup_step2">Return to AutoSMS</string>
+    <string name="auto_reply_setup_step2_sub">We\'ll re-bind automatically and start watching for incoming SMS.</string>
+    <string name="auto_reply_setup_status_pending">Permission needed</string>
+    <string name="auto_reply_setup_status_done">Permission granted</string>
+
+    <!-- Auto-reply list polish -->
+    <string name="auto_reply_empty_title">No auto-reply rules yet</string>
+    <string name="auto_reply_empty_subtitle">Tap + to choose a contact and tell the AI how to reply.</string>
+
+    <!-- Generic actions used across new screens -->
+    <string name="action_edit">Edit</string>
+    <string name="action_delete">Delete</string>
 </resources>

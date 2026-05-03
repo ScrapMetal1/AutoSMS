@@ -83,6 +83,7 @@ class MainActivity : AppCompatActivity() {
         setupViewModel()
         setupRecyclerView()
         setupFab()
+        setupAutoReplyCard()
         setupSortButton() // Call the new setupSortButton
         checkPermissions()
         observeSchedules()
@@ -151,6 +152,12 @@ class MainActivity : AppCompatActivity() {
         binding.recyclerView.setHasFixedSize(true)
     }
 
+    private fun setupAutoReplyCard() {
+        binding.cardAutoReply.setOnClickListener {
+            startActivity(Intent(this, AutoReplyListActivity::class.java))
+        }
+    }
+
     // Setup FloatingActionButton to add new schedules
     private fun setupFab() {
         binding.fabAdd.setOnClickListener {
@@ -180,7 +187,7 @@ class MainActivity : AppCompatActivity() {
     private fun setupSortButton() {
         binding.btnSort.setOnClickListener {
             val dialog = BottomSheetDialog(this)
-            val sheetView = layoutInflater.inflate(R.layout.dialog_sort_options, null)
+            val sheetView = layoutInflater.inflate(R.layout.dialog_sort_options, binding.root, false)
             dialog.setContentView(sheetView)
 
             val toggleOrder = sheetView.findViewById<MaterialButtonToggleGroup>(R.id.toggleOrder)

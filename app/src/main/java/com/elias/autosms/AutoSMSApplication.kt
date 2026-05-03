@@ -4,6 +4,7 @@ import android.app.Application
 import android.util.Log
 import com.elias.autosms.billing.BillingManager
 import com.elias.autosms.data.SmsScheduleDatabase
+import com.google.android.material.color.DynamicColors
 import com.google.firebase.FirebaseApp
 import com.google.firebase.appcheck.FirebaseAppCheck
 import com.google.firebase.appcheck.playintegrity.PlayIntegrityAppCheckProviderFactory
@@ -14,6 +15,10 @@ class AutoSMSApplication : Application() {
 
         // Warm the database so the first UI query isn't on the critical path.
         SmsScheduleDatabase.getDatabase(this)
+
+        // Material You: on Android 12+ this swaps the static brand palette for
+        // the user's wallpaper-derived colors. No-op on older devices.
+        DynamicColors.applyToActivitiesIfAvailable(this)
 
         initializeFirebase()
 

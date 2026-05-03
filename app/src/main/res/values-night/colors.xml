@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Material 3 brand palette (dark theme). Same role tokens as values/colors.xml,
+         tuned for AA contrast against the dark surface. -->
+    <color name="md_primary">#BFC2FF</color>
+    <color name="md_on_primary">#272888</color>
+    <color name="md_primary_container">#3F40A1</color>
+    <color name="md_on_primary_container">#E0E0FF</color>
+    <color name="md_secondary">#C5C4DD</color>
+    <color name="md_on_secondary">#2E2F42</color>
+    <color name="md_secondary_container">#444559</color>
+    <color name="md_on_secondary_container">#E1E0F9</color>
+    <color name="md_tertiary">#E9C08D</color>
+    <color name="md_on_tertiary">#442B0A</color>
+    <color name="md_tertiary_container">#5E411F</color>
+    <color name="md_on_tertiary_container">#FFDDB7</color>
+    <color name="md_error">#FFB4AB</color>
+    <color name="md_on_error">#690005</color>
+    <color name="md_background">#1B1B1F</color>
+    <color name="md_on_background">#E4E1E6</color>
+    <color name="md_surface">#1B1B1F</color>
+    <color name="md_on_surface">#E4E1E6</color>
+    <color name="md_surface_variant">#46464F</color>
+    <color name="md_on_surface_variant">#C7C5D0</color>
+    <color name="md_outline">#90909A</color>
+
+    <color name="premium_accent">#BFAFFF</color>
+    <color name="premium_accent_container">#3A2E68</color>
+</resources>

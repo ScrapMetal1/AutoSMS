@@ -1,21 +1,25 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+# Keep stack traces useful in Play Console crash reports.
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# ---- Room ----
+# Generated DAO impls reference our entities by name; without this, R8 can
+# strip fields and Room runtime fails with "missing column".
+-keep class com.elias.autosms.data.** { *; }
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# ---- Firebase / Google Play services ----
+# Firebase SDKs use reflection for serialization and component discovery.
+# Bundled rules from each AAR cover most cases; defensive keep below.
+-keep class com.google.firebase.** { *; }
+-dontwarn com.google.firebase.**
+-keep class com.google.android.gms.** { *; }
+-dontwarn com.google.android.gms.**
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# ---- Google Play Billing ----
+-keep class com.android.billingclient.api.** { *; }
+-keep class com.elias.autosms.billing.** { *; }
+
+# ---- Our Parcelable data classes (passed via Intent extras) ----
+-keep class com.elias.autosms.data.AutoReplyRule { *; }
+-keep class com.elias.autosms.data.ContextDocument { *; }
+-keep class com.elias.autosms.data.SmsSchedule { *; }

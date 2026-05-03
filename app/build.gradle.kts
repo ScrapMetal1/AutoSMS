@@ -18,7 +18,10 @@ android {
 
     defaultConfig {
         applicationId = "com.elias.autosms"
-        minSdk = 21
+        // 23 (Marshmallow) covers ~99.5% of active devices and gives us clean
+        // access to ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS and
+        // ACTION_NOTIFICATION_LISTENER_SETTINGS without API guards.
+        minSdk = 23
         targetSdk = 35
         versionCode = 9
         versionName = "1.7"

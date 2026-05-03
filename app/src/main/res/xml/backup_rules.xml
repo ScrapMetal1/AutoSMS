@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <full-backup-content>
-    <!-- Include the SMS schedule database for backup -->
-    <include domain="database" path="sms_schedule_database" />
+    <!-- The Room database now stores SMS message bodies, AI prompts, and
+         user-supplied context documents — all sensitive. Exclude the entire
+         database file from cloud backups so a compromised Google account
+         can't leak it. Users restore by re-creating schedules / rules. -->
+    <exclude domain="database" path="sms_schedule_database" />
+    <exclude domain="database" path="sms_schedule_database-shm" />
+    <exclude domain="database" path="sms_schedule_database-wal" />
+    <exclude domain="sharedpref" path="sms_alarm_times.xml" />
 </full-backup-content>

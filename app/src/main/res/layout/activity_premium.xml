@@ -7,13 +7,14 @@
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:background="@android:color/transparent"
         android:theme="@style/Theme.AutoSMS.AppBarOverlay">
 
         <androidx.appcompat.widget.Toolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            android:background="?attr/colorPrimary"
+            android:background="?attr/colorSurface"
             app:popupTheme="@style/Theme.AutoSMS.PopupOverlay"
             app:title="@string/auto_reply_premium_locked" />
     </com.google.android.material.appbar.AppBarLayout>
@@ -21,42 +22,92 @@
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+        app:layout_behavior="@string/appbar_scrolling_view_behavior"
+        android:fillViewport="true">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="24dp">
+            android:padding="20dp">
 
-            <TextView
+            <!-- Hero card -->
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textSize="22sp"
-                android:textStyle="bold"
-                android:text="@string/auto_reply_title" />
+                app:cardBackgroundColor="?attr/colorPrimary"
+                app:cardCornerRadius="24dp"
+                app:cardElevation="0dp">
 
-            <TextView
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center_horizontal"
+                    android:padding="28dp">
+
+                    <ImageView
+                        android:layout_width="56dp"
+                        android:layout_height="56dp"
+                        android:src="@drawable/ic_sparkle"
+                        android:contentDescription="@null"
+                        app:tint="?attr/colorOnPrimary" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:textAppearance="?attr/textAppearanceHeadlineSmall"
+                        android:textColor="?attr/colorOnPrimary"
+                        android:text="@string/premium_hero_title" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:gravity="center"
+                        android:textAppearance="?attr/textAppearanceBodyMedium"
+                        android:textColor="?attr/colorOnPrimary"
+                        android:alpha="0.92"
+                        android:text="@string/auto_reply_premium_locked_body" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Feature bullets -->
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:textSize="14sp"
-                android:textColor="?android:attr/textColorSecondary"
-                android:text="@string/auto_reply_premium_locked_body" />
+                android:layout_marginTop="20dp"
+                android:orientation="vertical">
+
+                <include
+                    layout="@layout/include_premium_feature"
+                    android:id="@+id/featureReplies" />
+
+                <include
+                    layout="@layout/include_premium_feature"
+                    android:id="@+id/featureContext" />
+
+                <include
+                    layout="@layout/include_premium_feature"
+                    android:id="@+id/featureSafe" />
+            </LinearLayout>
 
             <TextView
                 android:id="@+id/textPriceSummary"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:textSize="16sp"
-                android:textColor="?android:attr/textColorPrimary" />
+                android:layout_marginTop="24dp"
+                android:gravity="center"
+                android:textAppearance="?attr/textAppearanceTitleMedium" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/buttonSubscribe"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="12dp"
+                android:padding="14dp"
+                android:textAppearance="?attr/textAppearanceLabelLarge"
                 android:text="@string/auto_reply_subscribe" />
 
             <com.google.android.material.button.MaterialButton
@@ -65,19 +116,29 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:text="@string/auto_reply_restore"
-                style="@style/Widget.Material3.Button.OutlinedButton" />
+                style="@style/Widget.Material3.Button.TextButton" />
 
             <TextView
                 android:id="@+id/textActiveBanner"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
+                android:layout_marginTop="16dp"
                 android:gravity="center"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:textColor="?attr/colorPrimary"
+                android:padding="12dp"
+                android:background="?attr/colorPrimaryContainer"
+                android:textAppearance="?attr/textAppearanceTitleSmall"
+                android:textColor="?attr/colorOnPrimaryContainer"
                 android:visibility="gone"
                 android:text="@string/auto_reply_premium_active" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                android:gravity="center"
+                android:text="@string/premium_legal" />
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Legacy palette kept so older code referencing them still compiles. -->
     <color name="purple_200">#FFBB86FC</color>
     <color name="purple_500">#FF6200EE</color>
     <color name="purple_700">#FF3700B3</color>
@@ -7,4 +8,33 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <!-- Material 3 brand palette (light theme defaults). The runtime overrides
+         these with Material You dynamic colors on Android 12+ via
+         DynamicColors.applyToActivitiesIfAvailable in AutoSMSApplication. -->
+    <color name="md_primary">#5B5BD6</color>
+    <color name="md_on_primary">#FFFFFFFF</color>
+    <color name="md_primary_container">#E0E0FF</color>
+    <color name="md_on_primary_container">#161357</color>
+    <color name="md_secondary">#5C5D72</color>
+    <color name="md_on_secondary">#FFFFFFFF</color>
+    <color name="md_secondary_container">#E1E0F9</color>
+    <color name="md_on_secondary_container">#191A2C</color>
+    <color name="md_tertiary">#785A36</color>
+    <color name="md_on_tertiary">#FFFFFFFF</color>
+    <color name="md_tertiary_container">#FFDDB7</color>
+    <color name="md_on_tertiary_container">#2A1800</color>
+    <color name="md_error">#BA1A1A</color>
+    <color name="md_on_error">#FFFFFFFF</color>
+    <color name="md_background">#FFFBFF</color>
+    <color name="md_on_background">#1B1B1F</color>
+    <color name="md_surface">#FFFBFF</color>
+    <color name="md_on_surface">#1B1B1F</color>
+    <color name="md_surface_variant">#E4E1EC</color>
+    <color name="md_on_surface_variant">#46464F</color>
+    <color name="md_outline">#777680</color>
+
+    <!-- Premium accent — for the "AI Auto Replies" card and entitlement banners. -->
+    <color name="premium_accent">#7C5CFF</color>
+    <color name="premium_accent_container">#EDE7FF</color>
 </resources>

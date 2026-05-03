@@ -1,9 +1,6 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Base Material 3 DayNight theme.
-         Dynamic color is applied at runtime via DynamicColors in
-         AutoSMSApplication on Android 12+; on older devices these static
-         tokens take effect. -->
+    <!-- Dark variant: same role tokens, dark-tuned colours, light-icon bars. -->
     <style name="Theme.AutoSMS" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="colorPrimary">@color/md_primary</item>
         <item name="colorOnPrimary">@color/md_on_primary</item>
@@ -27,25 +24,11 @@
         <item name="colorOnSurfaceVariant">@color/md_on_surface_variant</item>
         <item name="colorOutline">@color/md_outline</item>
 
-        <!-- Edge-to-edge: status + nav bars become transparent and content
-             draws under them. Each activity then applies window insets via
-             ViewCompat.setOnApplyWindowInsetsListener (already present on
-             every screen we ship). -->
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
-        <item name="android:windowLightStatusBar">true</item>
-        <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">true</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">false</item>
     </style>
-
-    <style name="Theme.AutoSMS.NoActionBar" parent="Theme.AutoSMS">
-        <item name="windowActionBar">false</item>
-        <item name="windowNoTitle">true</item>
-    </style>
-
-    <!-- AppBar uses the on-surface palette so toolbar icons match the rest of
-         the screen rather than inverting on a primary-coloured background. -->
-    <style name="Theme.AutoSMS.AppBarOverlay" parent="ThemeOverlay.Material3.ActionBar" />
-    <style name="Theme.AutoSMS.PopupOverlay" parent="ThemeOverlay.Material3" />
 
     <style name="Theme.App.Starting" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">?attr/colorPrimaryContainer</item>
