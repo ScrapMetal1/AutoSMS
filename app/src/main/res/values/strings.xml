@@ -121,6 +121,43 @@
     <string name="auto_reply_premium_active">You\'re subscribed — auto-replies are active.</string>
     <string name="auto_reply_delete_confirm">Delete this auto-reply rule?</string>
 
+    <!-- Add/Edit Rule — sectioned redesign -->
+    <string name="auto_reply_section_who">Who triggers this rule</string>
+    <string name="auto_reply_section_prompt">How should the AI reply</string>
+    <string name="auto_reply_section_prompt_intro">Tell the AI what to say. Be specific about tone and what information to share.</string>
+    <string name="auto_reply_section_test">Try it out</string>
+    <string name="auto_reply_pick_contact">Choose a contact</string>
+    <string name="auto_reply_enter_manually">Or enter a number manually</string>
+    <string name="auto_reply_change">Change</string>
+    <string name="auto_reply_manual_number_hint">Phone number</string>
+    <string name="auto_reply_rule_name">Name (optional)</string>
+    <string name="auto_reply_rule_name_helper">Shown in your rules list. Auto-filled when you pick a contact.</string>
+    <string name="auto_reply_prompt_hint">Reply instructions</string>
+    <string name="auto_reply_prompt_examples_label">Quick starters — tap to use</string>
+    <string name="auto_reply_test_result_label">Sample reply</string>
+    <string name="auto_reply_enabled_helper">Off = the AI won\'t reply to this contact.</string>
+
+    <string-array name="auto_reply_prompt_examples">
+        <item>Politely say I\'m driving and will reply when I stop.</item>
+        <item>Tell them I\'m in a meeting until 3pm and will respond afterwards.</item>
+        <item>Reply warmly that I\'ll get back to them by end of day.</item>
+        <item>Let them know I\'m on holiday until next Monday and check email is monitored.</item>
+        <item>Thank them for their message and confirm I\'ve seen it.</item>
+    </string-array>
+
+    <!-- Auto-reply list — surfaced action cards (replaces overflow menu hunting) -->
+    <string name="auto_reply_action_documents">Context documents</string>
+    <string name="auto_reply_action_documents_sub">Background notes the AI references</string>
+    <string name="auto_reply_action_setup_ok">Notification access · Granted</string>
+    <string name="auto_reply_action_setup_needed">Notification access · Needed</string>
+    <string name="auto_reply_action_setup_sub_ok">Listening for incoming SMS.</string>
+    <string name="auto_reply_action_setup_sub_needed">Required to read incoming SMS notifications.</string>
+    <string name="auto_reply_documents_count_zero">No documents yet</string>
+    <string name="auto_reply_documents_count_one">1 document</string>
+    <string name="auto_reply_documents_count_many">%d documents</string>
+    <string name="auto_reply_section_rules">Your rules</string>
+    <string name="auto_reply_fab_add">New rule</string>
+
     <!-- Context documents (premium AI grounding) -->
     <string name="context_documents_title">Context documents</string>
     <string name="context_documents_empty">No context documents yet.\nAdd notes, FAQs, or business hours so the AI can reference them when replying.</string>

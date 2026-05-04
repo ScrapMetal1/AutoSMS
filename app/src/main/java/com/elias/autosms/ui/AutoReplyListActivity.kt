@@ -10,22 +10,27 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.elias.autosms.BuildConfig
 import com.elias.autosms.R
 import com.elias.autosms.billing.BillingManager
 import com.elias.autosms.billing.EntitlementState
 import com.elias.autosms.databinding.ActivityAutoReplyListBinding
+import com.elias.autosms.repository.ContextDocumentRepository
 import com.elias.autosms.ui.adapter.AutoReplyRuleAdapter
 import com.elias.autosms.utils.NotificationListenerHelper
 import com.elias.autosms.viewmodel.AutoReplyListViewModel
 import com.elias.autosms.viewmodel.AutoReplyListViewModelFactory
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class AutoReplyListActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityAutoReplyListBinding
     private lateinit var viewModel: AutoReplyListViewModel
     private lateinit var adapter: AutoReplyRuleAdapter
+    private val documentsRepo by lazy { ContextDocumentRepository(applicationContext) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -61,14 +66,19 @@ class AutoReplyListActivity : AppCompatActivity() {
         )
         binding.recyclerView.layoutManager = LinearLayoutManager(this)
         binding.recyclerView.adapter = adapter
-        binding.recyclerView.setHasFixedSize(true)
+        binding.recyclerView.setHasFixedSize(false)
 
         binding.fabAdd.setOnClickListener {
             startActivity(Intent(this, AddEditAutoReplyRuleActivity::class.java))
         }
 
-        binding.buttonOpenSetup.setOnClickListener {
+        // The two action cards replace the old overflow menu so the most-used
+        // navigation is visible the moment the screen opens.
+        binding.cardSetupStatus.setOnClickListener {
             startActivity(Intent(this, AutoReplySetupActivity::class.java))
+        }
+        binding.cardDocuments.setOnClickListener {
+            startActivity(Intent(this, ContextDocumentListActivity::class.java))
         }
 
         viewModel.rules.observe(this) { rules ->
@@ -77,14 +87,16 @@ class AutoReplyListActivity : AppCompatActivity() {
                     if (rules.isEmpty()) View.VISIBLE else View.GONE
         }
 
+        // Live count for the Documents card. Observed once and re-fetched
+        // onResume so changes made on the documents screen reflect when the
+        // user comes back.
         observeEntitlement()
     }
 
     override fun onResume() {
         super.onResume()
-        // Setup banner is shown whenever the listener service isn't bound.
-        binding.cardSetupBanner.visibility =
-                if (NotificationListenerHelper.isEnabled(this)) View.GONE else View.VISIBLE
+        refreshSetupStatus()
+        refreshDocumentsCount()
     }
 
     override fun onSupportNavigateUp(): Boolean {
@@ -92,28 +104,61 @@ class AutoReplyListActivity : AppCompatActivity() {
         return true
     }
 
-    override fun onCreateOptionsMenu(menu: android.view.Menu?): Boolean {
-        menuInflater.inflate(R.menu.menu_auto_reply_list, menu)
-        return true
-    }
-
-    override fun onOptionsItemSelected(item: android.view.MenuItem): Boolean {
-        return when (item.itemId) {
-            R.id.action_context_documents -> {
-                startActivity(Intent(this, ContextDocumentListActivity::class.java))
-                true
-            }
-            R.id.action_setup -> {
-                startActivity(Intent(this, AutoReplySetupActivity::class.java))
-                true
-            }
-            else -> super.onOptionsItemSelected(item)
+    /** Setup status card flips between needs-action (tertiary) and ok (primary). */
+    private fun refreshSetupStatus() {
+        val granted = NotificationListenerHelper.isEnabled(this)
+        if (granted) {
+            binding.iconSetupStatus.setImageResource(R.drawable.ic_check_circle)
+            binding.textSetupStatusTitle.setText(R.string.auto_reply_action_setup_ok)
+            binding.textSetupStatusSub.setText(R.string.auto_reply_action_setup_sub_ok)
+            binding.cardSetupStatus.setCardBackgroundColor(
+                    com.google.android.material.color.MaterialColors.getColor(
+                            binding.root,
+                            com.google.android.material.R.attr.colorPrimaryContainer
+                    )
+            )
+            val onContainer = com.google.android.material.color.MaterialColors.getColor(
+                    binding.root,
+                    com.google.android.material.R.attr.colorOnPrimaryContainer
+            )
+            binding.iconSetupStatus.setColorFilter(onContainer)
+            binding.textSetupStatusTitle.setTextColor(onContainer)
+            binding.textSetupStatusSub.setTextColor(onContainer)
+        } else {
+            binding.iconSetupStatus.setImageResource(R.drawable.ic_lock)
+            binding.textSetupStatusTitle.setText(R.string.auto_reply_action_setup_needed)
+            binding.textSetupStatusSub.setText(R.string.auto_reply_action_setup_sub_needed)
+            binding.cardSetupStatus.setCardBackgroundColor(
+                    com.google.android.material.color.MaterialColors.getColor(
+                            binding.root,
+                            com.google.android.material.R.attr.colorTertiaryContainer
+                    )
+            )
+            val onContainer = com.google.android.material.color.MaterialColors.getColor(
+                    binding.root,
+                    com.google.android.material.R.attr.colorOnTertiaryContainer
+            )
+            binding.iconSetupStatus.setColorFilter(onContainer)
+            binding.textSetupStatusTitle.setTextColor(onContainer)
+            binding.textSetupStatusSub.setTextColor(onContainer)
         }
     }
 
-    // Premium gate: if not entitled, send the user to the paywall instead of
-    // letting them configure rules they can't actually run.
+    private fun refreshDocumentsCount() {
+        lifecycleScope.launch {
+            val count = withContext(Dispatchers.IO) { documentsRepo.getEnabled().size }
+            binding.textDocumentsCount.text = when (count) {
+                0 -> getString(R.string.auto_reply_documents_count_zero)
+                1 -> getString(R.string.auto_reply_documents_count_one)
+                else -> getString(R.string.auto_reply_documents_count_many, count)
+            }
+        }
+    }
+
+    // Premium gate. Debug builds skip so the AI flow can be tested before
+    // billing is wired up in Play Console.
     private fun observeEntitlement() {
+        if (BuildConfig.BYPASS_PREMIUM) return
         lifecycleScope.launch {
             BillingManager.get(this@AutoReplyListActivity).entitlement.collectLatest { state ->
                 if (state == EntitlementState.NotSubscribed) {

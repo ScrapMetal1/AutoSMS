@@ -9,6 +9,7 @@ import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import com.elias.autosms.BuildConfig
 import com.elias.autosms.ai.AiReplyGenerator
 import com.elias.autosms.billing.BillingManager
 import com.elias.autosms.data.AutoReplyHistory
@@ -64,7 +65,7 @@ class SmsNotificationListenerService : NotificationListenerService() {
         try {
             val rule = repository.findMatchingRule(sender) ?: return
 
-            if (!billing.entitlement.value.isEntitled) {
+            if (!BuildConfig.BYPASS_PREMIUM && !billing.entitlement.value.isEntitled) {
                 Log.d(TAG, "Skipping reply for rule ${rule.id} — not entitled")
                 repository.logHistory(
                         AutoReplyHistory(

@@ -59,6 +59,19 @@ android {
     }
     buildFeatures {
         viewBinding = true
+        // Generates BuildConfig.kt so we can branch on DEBUG_BYPASS_PREMIUM below.
+        buildConfig = true
+    }
+
+    buildTypes.named("debug") {
+        // Debug builds skip the Play Billing entitlement check so the AI
+        // auto-reply flow can be exercised end-to-end without uploading to
+        // Play Console first. Release builds (isDebuggable = false) keep
+        // the real paywall.
+        buildConfigField("boolean", "BYPASS_PREMIUM", "true")
+    }
+    buildTypes.named("release") {
+        buildConfigField("boolean", "BYPASS_PREMIUM", "false")
     }
     
     // Memory optimization
